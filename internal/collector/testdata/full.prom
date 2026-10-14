@@ -1,0 +1,72 @@
+# HELP skoda_air_conditioning_state Air conditioning state; 1 for the current state.
+# TYPE skoda_air_conditioning_state gauge
+skoda_air_conditioning_state{state="HEATING",vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_api_key_expiry_timestamp_seconds Unix time when the API key expires, from X-API-Key-Expires-At.
+# TYPE skoda_api_key_expiry_timestamp_seconds gauge
+skoda_api_key_expiry_timestamp_seconds 1.7987616e+09
+# HELP skoda_api_ratelimit_remaining Remaining API calls in the current window, from RateLimit-Remaining.
+# TYPE skoda_api_ratelimit_remaining gauge
+skoda_api_ratelimit_remaining{vin="TMBJB9NY5RF999999"} 17
+# HELP skoda_battery_range_meters Remaining electric range.
+# TYPE skoda_battery_range_meters gauge
+skoda_battery_range_meters{vin="TMBJB9NY5RF999999"} 249000
+# HELP skoda_battery_soc_ratio Battery state of charge, 0 to 1.
+# TYPE skoda_battery_soc_ratio gauge
+skoda_battery_soc_ratio{vin="TMBJB9NY5RF999999"} 0.71
+# HELP skoda_charging_fully_charged_timestamp_seconds When charging is expected to finish, as Unix time.
+# TYPE skoda_charging_fully_charged_timestamp_seconds gauge
+skoda_charging_fully_charged_timestamp_seconds{vin="TMBJB9NY5RF999999"} 1.7919351e+09
+# HELP skoda_charging_in_saved_location 1 if the vehicle is at a saved charging location.
+# TYPE skoda_charging_in_saved_location gauge
+skoda_charging_in_saved_location{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_charging_max_current_amperes Maximum AC charging current.
+# TYPE skoda_charging_max_current_amperes gauge
+skoda_charging_max_current_amperes{vin="TMBJB9NY5RF999999"} 16
+# HELP skoda_charging_plug_connected 1 if the charging cable is connected.
+# TYPE skoda_charging_plug_connected gauge
+skoda_charging_plug_connected{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_charging_plug_locked 1 if the charging plug is locked.
+# TYPE skoda_charging_plug_locked gauge
+skoda_charging_plug_locked{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_charging_power_watts Current charging power.
+# TYPE skoda_charging_power_watts gauge
+skoda_charging_power_watts{vin="TMBJB9NY5RF999999"} 20160
+# HELP skoda_charging_profile_target_soc_ratio Charging limit of the profile at the vehicle's current location, 0 to 1.
+# TYPE skoda_charging_profile_target_soc_ratio gauge
+skoda_charging_profile_target_soc_ratio{vin="TMBJB9NY5RF999999"} 0.8
+# HELP skoda_charging_rate_meters_per_hour Range added per hour of charging.
+# TYPE skoda_charging_rate_meters_per_hour gauge
+skoda_charging_rate_meters_per_hour{vin="TMBJB9NY5RF999999"} 120500
+# HELP skoda_charging_remaining_seconds Time until fully charged.
+# TYPE skoda_charging_remaining_seconds gauge
+skoda_charging_remaining_seconds{vin="TMBJB9NY5RF999999"} 900
+# HELP skoda_charging_state Charging state; 1 for the current state.
+# TYPE skoda_charging_state gauge
+skoda_charging_state{state="CHARGING",vin="TMBJB9NY5RF999999"} 1
+skoda_charging_state{state="CHARGING_INTERRUPTED",vin="TMBJB9NY5RF999999"} 0
+skoda_charging_state{state="CONNECT_CABLE",vin="TMBJB9NY5RF999999"} 0
+skoda_charging_state{state="CONSERVING",vin="TMBJB9NY5RF999999"} 0
+skoda_charging_state{state="DISCHARGING",vin="TMBJB9NY5RF999999"} 0
+skoda_charging_state{state="READY_FOR_CHARGING",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_charging_target_soc_ratio Global charging limit, 0 to 1.
+# TYPE skoda_charging_target_soc_ratio gauge
+skoda_charging_target_soc_ratio{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_charging_type Charge type; 1 for the current type.
+# TYPE skoda_charging_type gauge
+skoda_charging_type{type="AC",vin="TMBJB9NY5RF999999"} 1
+skoda_charging_type{type="DC",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_doors_locked 1 if the doors are locked.
+# TYPE skoda_doors_locked gauge
+skoda_doors_locked{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_last_success_timestamp_seconds Unix time of the last successful API call.
+# TYPE skoda_last_success_timestamp_seconds gauge
+skoda_last_success_timestamp_seconds{vin="TMBJB9NY5RF999999"} 1.7919342e+09
+# HELP skoda_odometer_meters Odometer reading.
+# TYPE skoda_odometer_meters gauge
+skoda_odometer_meters{vin="TMBJB9NY5RF999999"} 1.2753e+07
+# HELP skoda_up 1 if the last API call for this VIN succeeded.
+# TYPE skoda_up gauge
+skoda_up{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_vehicle_info Vehicle metadata; always 1.
+# TYPE skoda_vehicle_info gauge
+skoda_vehicle_info{license_plate="1AB 2345",name="My Enyaq",vin="TMBJB9NY5RF999999"} 1

@@ -1,0 +1,10 @@
+{
+  "vehicle": {
+    "vin": "TMBJB9NY5RF999999",
+    "name": "My Enyaq",
+    "odometer": { "mileageInKm": 12753 }
+  },
+  "errors": [
+    { "type": "CHARGING_UNAVAILABLE", "description": "Charging status could not be retrieved." }
+  ]
+}

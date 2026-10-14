@@ -1,0 +1,36 @@
+{
+  "vehicle": {
+    "vin": "TMBJB9NY5RF999999",
+    "name": "My Enyaq",
+    "licensePlate": "1AB 2345",
+    "status": { "overall": { "doorsLocked": "YES" } },
+    "odometer": { "mileageInKm": 12753 },
+    "airConditioning": { "state": "HEATING" },
+    "charging": {
+      "isVehicleInSavedLocation": true,
+      "status": {
+        "chargingRateInKilometersPerHour": 120.5,
+        "chargePowerInKw": 20.16,
+        "remainingTimeToFullyChargedInMinutes": 15,
+        "fullyChargedAt": "2026-10-13T23:45:00Z",
+        "state": "CHARGING",
+        "chargeType": "AC",
+        "plugConnectionState": "CONNECTED",
+        "plugLockState": "LOCKED",
+        "battery": {
+          "remainingCruisingRangeInMeters": 249000,
+          "stateOfChargeInPercent": 71
+        }
+      },
+      "settings": {
+        "targetStateOfChargeInPercent": 100,
+        "maxChargeCurrentAc": "MAXIMUM",
+        "maxChargeCurrentAcAmpere": 16
+      }
+    },
+    "chargingProfiles": {
+      "currentVehiclePositionProfile": { "targetStateOfChargeInPercent": 80 }
+    }
+  },
+  "errors": []
+}
