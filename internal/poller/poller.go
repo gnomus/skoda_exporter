@@ -5,7 +5,6 @@ package poller
 import (
 	"context"
 	"log/slog"
-	"math/rand/v2"
 	"net/http"
 	"strconv"
 	"sync"
@@ -110,7 +109,7 @@ func (p *Poller) Run(ctx context.Context) {
 	if p.Interval < MinInterval {
 		p.Interval = MinInterval
 	}
-	delay := time.Duration(rand.Int64N(int64(30 * time.Second)))
+	var delay time.Duration
 	for {
 		select {
 		case <-ctx.Done():

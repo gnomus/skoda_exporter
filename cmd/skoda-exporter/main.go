@@ -50,6 +50,7 @@ func main() {
 	if err != nil {
 		fatal("loading API key", err)
 	}
+	cfg.vin = strings.TrimSpace(cfg.vin)
 	if cfg.vin == "" {
 		fatal("configuration", errors.New("no VIN: set SKODA_VIN or -vin"))
 	}
