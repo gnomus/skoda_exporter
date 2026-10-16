@@ -48,17 +48,17 @@ func (s stubFetcher) Vehicle(context.Context, string, []string) (*api.VehicleRes
 }
 
 func TestPollOnceCountsAndRecords(t *testing.T) {
-	store := NewStore([]string{"V1"})
+	store := NewStore("V1")
 	reqs := NewRequestsCounter()
 	expiry := time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)
-	p := &Poller{Store: store, Interval: 5 * time.Minute, Requests: reqs}
+	p := &Poller{VIN: "V1", Store: store, Interval: 5 * time.Minute, Requests: reqs}
 
 	p.Fetcher = stubFetcher{meta: api.Meta{StatusCode: 200, KeyExpiresAt: expiry}}
-	p.PollOnce(context.Background(), "V1")
+	p.PollOnce(context.Background())
 	p.Fetcher = stubFetcher{meta: api.Meta{StatusCode: 503}, err: &api.StatusError{StatusCode: 503}}
-	p.PollOnce(context.Background(), "V1")
+	p.PollOnce(context.Background())
 	p.Fetcher = stubFetcher{err: errors.New("network down")}
-	p.PollOnce(context.Background(), "V1")
+	p.PollOnce(context.Background())
 
 	for code, want := range map[string]float64{"200": 1, "503": 1, "error": 1} {
 		if got := testutil.ToFloat64(reqs.WithLabelValues("V1", code)); got != want {
@@ -66,7 +66,7 @@ func TestPollOnceCountsAndRecords(t *testing.T) {
 		}
 	}
 
-	snap := store.Snapshots()[0]
+	snap := store.Snapshot()
 	if snap.Up {
 		t.Error("Up should be false after a failure")
 	}
@@ -81,7 +81,7 @@ func TestPollOnceCountsAndRecords(t *testing.T) {
 func TestRunClampsInterval(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	p := &Poller{Store: NewStore(nil), Interval: time.Minute}
+	p := &Poller{Store: NewStore("V1"), Interval: time.Minute}
 	p.Run(ctx)
 	if p.Interval != MinInterval {
 		t.Errorf("Interval = %v, want %v", p.Interval, MinInterval)

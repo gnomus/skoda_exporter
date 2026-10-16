@@ -43,9 +43,9 @@ var t0 = time.Date(2026, 10, 13, 23, 30, 0, 0, time.UTC)
 
 // setup polls once through a fake fetcher and returns a collector over it.
 func setup(f *fakeFetcher) (*poller.Poller, *Collector) {
-	store := poller.NewStore([]string{vin})
-	p := &poller.Poller{Fetcher: f, Store: store, Interval: 5 * time.Minute, Now: func() time.Time { return t0 }}
-	p.PollOnce(context.Background(), vin)
+	store := poller.NewStore(vin)
+	p := &poller.Poller{VIN: vin, Fetcher: f, Store: store, Interval: 5 * time.Minute, Now: func() time.Time { return t0 }}
+	p.PollOnce(context.Background())
 	return p, &Collector{Store: store, StaleAfter: time.Hour, Now: func() time.Time { return t0 }}
 }
 
@@ -91,7 +91,7 @@ func TestFailureKeepsLastDataUntilStale(t *testing.T) {
 
 	// A later call fails: up drops to 0, vehicle data stays.
 	f.res, f.meta, f.err = nil, api.Meta{StatusCode: 503}, &api.StatusError{StatusCode: 503}
-	p.PollOnce(context.Background(), vin)
+	p.PollOnce(context.Background())
 
 	want := `
 # HELP skoda_up 1 if the last API call for this VIN succeeded.

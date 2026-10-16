@@ -27,7 +27,7 @@ import (
 type config struct {
 	apiKey     string
 	apiKeyFile string
-	vins       string
+	vin        string
 	interval   time.Duration
 	include    string
 	baseURL    string
@@ -50,16 +50,15 @@ func main() {
 	if err != nil {
 		fatal("loading API key", err)
 	}
-	vins := splitList(cfg.vins)
-	if len(vins) == 0 {
-		fatal("configuration", errors.New("no VINs: set SKODA_VINS or -vins"))
+	if cfg.vin == "" {
+		fatal("configuration", errors.New("no VIN: set SKODA_VIN or -vin"))
 	}
 	if cfg.interval < poller.MinInterval {
 		logger.Warn("poll interval raised to stay under the API rate limit", "requested", cfg.interval, "used", poller.MinInterval)
 		cfg.interval = poller.MinInterval
 	}
 
-	store := poller.NewStore(vins)
+	store := poller.NewStore(cfg.vin)
 	requests := poller.NewRequestsCounter()
 
 	reg := prometheus.NewRegistry()
@@ -73,7 +72,7 @@ func main() {
 	p := &poller.Poller{
 		Fetcher:  api.New(cfg.baseURL, key, nil),
 		Store:    store,
-		VINs:     vins,
+		VIN:      cfg.vin,
 		Include:  splitList(cfg.include),
 		Interval: cfg.interval,
 		Logger:   logger,
@@ -108,7 +107,7 @@ func main() {
 		}
 	}()
 
-	logger.Info("starting", "listen", cfg.listenAddr, "vins", len(vins), "interval", cfg.interval, "base_url", cfg.baseURL)
+	logger.Info("starting", "listen", cfg.listenAddr, "vin", cfg.vin, "interval", cfg.interval, "base_url", cfg.baseURL)
 	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal("http server", err)
 	}
@@ -119,8 +118,8 @@ func parseFlags(args []string) config {
 	fs := flag.NewFlagSet("skoda-exporter", flag.ExitOnError)
 	fs.StringVar(&cfg.apiKey, "api-key", env("SKODA_API_KEY", ""), "MyŠkoda API key (env SKODA_API_KEY); prefer -api-key-file")
 	fs.StringVar(&cfg.apiKeyFile, "api-key-file", env("SKODA_API_KEY_FILE", ""), "file holding the API key (env SKODA_API_KEY_FILE)")
-	fs.StringVar(&cfg.vins, "vins", env("SKODA_VINS", ""), "comma-separated VINs to poll (env SKODA_VINS)")
-	fs.DurationVar(&cfg.interval, "poll-interval", envDuration("SKODA_POLL_INTERVAL", 5*time.Minute), "time between calls per VIN, at least 4m (env SKODA_POLL_INTERVAL)")
+	fs.StringVar(&cfg.vin, "vin", env("SKODA_VIN", ""), "VIN to poll (env SKODA_VIN)")
+	fs.DurationVar(&cfg.interval, "poll-interval", envDuration("SKODA_POLL_INTERVAL", 5*time.Minute), "time between calls, at least 4m (env SKODA_POLL_INTERVAL)")
 	fs.StringVar(&cfg.include, "include", env("SKODA_INCLUDE", ""), "comma-separated response parts; empty means all (env SKODA_INCLUDE)")
 	fs.StringVar(&cfg.baseURL, "base-url", env("SKODA_BASE_URL", api.ProductionURL), "API base URL; "+api.SandboxURL+" for the sandbox (env SKODA_BASE_URL)")
 	fs.StringVar(&cfg.listenAddr, "listen-address", env("LISTEN_ADDR", ":9877"), "address for /metrics (env LISTEN_ADDR)")

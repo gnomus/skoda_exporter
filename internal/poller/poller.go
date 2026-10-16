@@ -1,4 +1,4 @@
-// Package poller fetches each vehicle on a timer and keeps the latest result,
+// Package poller fetches the vehicle on a timer and keeps the latest result,
 // so Prometheus scrapes never spend API quota.
 package poller
 
@@ -29,7 +29,7 @@ type Fetcher interface {
 	Vehicle(ctx context.Context, vin string, include []string) (*api.VehicleResponse, api.Meta, error)
 }
 
-// Snapshot is what the collector reads for one VIN.
+// Snapshot is what the collector reads.
 type Snapshot struct {
 	VIN string
 	// Response is the last successful response; nil before the first one.
@@ -40,30 +40,22 @@ type Snapshot struct {
 	RateLimitRemaining *int
 }
 
-// Store holds the latest state for all VINs.
+// Store holds the latest state of the vehicle.
 type Store struct {
 	mu           sync.RWMutex
-	vins         map[string]*Snapshot
+	snap         Snapshot
 	keyExpiresAt time.Time
 }
 
-func NewStore(vins []string) *Store {
-	s := &Store{vins: make(map[string]*Snapshot, len(vins))}
-	for _, v := range vins {
-		s.vins[v] = &Snapshot{VIN: v}
-	}
-	return s
+func NewStore(vin string) *Store {
+	return &Store{snap: Snapshot{VIN: vin}}
 }
 
-// Snapshots returns copies of all VIN states.
-func (s *Store) Snapshots() []Snapshot {
+// Snapshot returns a copy of the vehicle state.
+func (s *Store) Snapshot() Snapshot {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]Snapshot, 0, len(s.vins))
-	for _, v := range s.vins {
-		out = append(out, *v)
-	}
-	return out
+	return s.snap
 }
 
 // KeyExpiresAt returns the API key expiry, or the zero time if never seen.
@@ -73,14 +65,10 @@ func (s *Store) KeyExpiresAt() time.Time {
 	return s.keyExpiresAt
 }
 
-func (s *Store) record(vin string, res *api.VehicleResponse, meta api.Meta, err error, now time.Time) {
+func (s *Store) record(res *api.VehicleResponse, meta api.Meta, err error, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snap := s.vins[vin]
-	if snap == nil {
-		snap = &Snapshot{VIN: vin}
-		s.vins[vin] = snap
-	}
+	snap := &s.snap
 	snap.Up = err == nil
 	if err == nil {
 		snap.Response = res
@@ -95,11 +83,11 @@ func (s *Store) record(vin string, res *api.VehicleResponse, meta api.Meta, err 
 	}
 }
 
-// Poller runs one loop per VIN.
+// Poller polls one VIN in a loop.
 type Poller struct {
 	Fetcher  Fetcher
 	Store    *Store
-	VINs     []string
+	VIN      string
 	Include  []string
 	Interval time.Duration
 	Logger   *slog.Logger
@@ -122,19 +110,6 @@ func (p *Poller) Run(ctx context.Context) {
 	if p.Interval < MinInterval {
 		p.Interval = MinInterval
 	}
-	var wg sync.WaitGroup
-	for _, vin := range p.VINs {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			p.loop(ctx, vin)
-		}()
-	}
-	wg.Wait()
-}
-
-func (p *Poller) loop(ctx context.Context, vin string) {
-	// Spread VINs out so they don't all call at once.
 	delay := time.Duration(rand.Int64N(int64(30 * time.Second)))
 	for {
 		select {
@@ -142,19 +117,19 @@ func (p *Poller) loop(ctx context.Context, vin string) {
 			return
 		case <-time.After(delay):
 		}
-		delay = p.PollOnce(ctx, vin)
+		delay = p.PollOnce(ctx)
 	}
 }
 
-// PollOnce fetches one VIN, records the result and returns how long to wait
+// PollOnce fetches the VIN, records the result and returns how long to wait
 // before the next call.
-func (p *Poller) PollOnce(ctx context.Context, vin string) time.Duration {
+func (p *Poller) PollOnce(ctx context.Context) time.Duration {
 	now := time.Now
 	if p.Now != nil {
 		now = p.Now
 	}
 
-	res, meta, err := p.Fetcher.Vehicle(ctx, vin, p.Include)
+	res, meta, err := p.Fetcher.Vehicle(ctx, p.VIN, p.Include)
 	if ctx.Err() != nil {
 		return 0
 	}
@@ -164,19 +139,19 @@ func (p *Poller) PollOnce(ctx context.Context, vin string) time.Duration {
 		code = strconv.Itoa(meta.StatusCode)
 	}
 	if p.Requests != nil {
-		p.Requests.WithLabelValues(vin, code).Inc()
+		p.Requests.WithLabelValues(p.VIN, code).Inc()
 	}
 
-	p.Store.record(vin, res, meta, err, now())
+	p.Store.record(res, meta, err, now())
 
 	if err != nil {
-		p.logger().Warn("vehicle poll failed", "vin", vin, "err", err)
+		p.logger().Warn("vehicle poll failed", "vin", p.VIN, "err", err)
 	} else if len(res.Errors) > 0 {
 		types := make([]string, 0, len(res.Errors))
 		for _, e := range res.Errors {
 			types = append(types, e.Type)
 		}
-		p.logger().Debug("vehicle poll partial", "vin", vin, "missing", types)
+		p.logger().Debug("vehicle poll partial", "vin", p.VIN, "missing", types)
 	}
 
 	return nextDelay(p.Interval, meta, err)
