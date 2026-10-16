@@ -39,7 +39,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}
-          # 1.2.3 becomes 1.2.3, plus latest.
+          # 1.2.3 becomes 1.2.3 only; no latest.
+          flavor: latest=false
           tags: |
             type=semver,pattern={{version}}
       - uses: docker/build-push-action@v6
