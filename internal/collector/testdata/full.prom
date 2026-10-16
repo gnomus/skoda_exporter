@@ -1,12 +1,62 @@
+# HELP skoda_active_ventilation_duration_seconds Active ventilation run time when started.
+# TYPE skoda_active_ventilation_duration_seconds gauge
+skoda_active_ventilation_duration_seconds{vin="TMBJB9NY5RF999999"} 300
+# HELP skoda_active_ventilation_state Active ventilation state; 1 for the current state.
+# TYPE skoda_active_ventilation_state gauge
+skoda_active_ventilation_state{state="OFF",vin="TMBJB9NY5RF999999"} 0
+skoda_active_ventilation_state{state="PREHEATING",vin="TMBJB9NY5RF999999"} 0
+skoda_active_ventilation_state{state="UNKNOWN",vin="TMBJB9NY5RF999999"} 0
+skoda_active_ventilation_state{state="UNSUPPORTED",vin="TMBJB9NY5RF999999"} 0
+skoda_active_ventilation_state{state="VENTILATION",vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_air_conditioning_at_unlock 1 if air conditioning starts at unlock.
+# TYPE skoda_air_conditioning_at_unlock gauge
+skoda_air_conditioning_at_unlock{vin="TMBJB9NY5RF999999"} 0
 # HELP skoda_air_conditioning_state Air conditioning state; 1 for the current state.
 # TYPE skoda_air_conditioning_state gauge
+skoda_air_conditioning_state{state="COMPLETED",vin="TMBJB9NY5RF999999"} 0
+skoda_air_conditioning_state{state="COOLING",vin="TMBJB9NY5RF999999"} 0
 skoda_air_conditioning_state{state="HEATING",vin="TMBJB9NY5RF999999"} 1
+skoda_air_conditioning_state{state="HEATING_AUXILIARY",vin="TMBJB9NY5RF999999"} 0
+skoda_air_conditioning_state{state="OFF",vin="TMBJB9NY5RF999999"} 0
+skoda_air_conditioning_state{state="UNKNOWN",vin="TMBJB9NY5RF999999"} 0
+skoda_air_conditioning_state{state="UNSUPPORTED",vin="TMBJB9NY5RF999999"} 0
+skoda_air_conditioning_state{state="VENTILATION",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_air_conditioning_target_reached_timestamp_seconds When the cabin is expected to reach the target temperature, as Unix time.
+# TYPE skoda_air_conditioning_target_reached_timestamp_seconds gauge
+skoda_air_conditioning_target_reached_timestamp_seconds{vin="TMBJB9NY5RF999999"} 1.7918766e+09
+# HELP skoda_air_conditioning_target_temperature_celsius Air conditioning target temperature.
+# TYPE skoda_air_conditioning_target_temperature_celsius gauge
+skoda_air_conditioning_target_temperature_celsius{vin="TMBJB9NY5RF999999"} 22.5
+# HELP skoda_air_conditioning_without_external_power 1 if air conditioning is allowed without external power.
+# TYPE skoda_air_conditioning_without_external_power gauge
+skoda_air_conditioning_without_external_power{vin="TMBJB9NY5RF999999"} 1
 # HELP skoda_api_key_expiry_timestamp_seconds Unix time when the API key expires, from X-API-Key-Expires-At.
 # TYPE skoda_api_key_expiry_timestamp_seconds gauge
 skoda_api_key_expiry_timestamp_seconds 1.7987616e+09
 # HELP skoda_api_ratelimit_remaining Remaining API calls in the current window, from RateLimit-Remaining.
 # TYPE skoda_api_ratelimit_remaining gauge
 skoda_api_ratelimit_remaining{vin="TMBJB9NY5RF999999"} 17
+# HELP skoda_auxiliary_heating_duration_seconds Auxiliary heating run time when started.
+# TYPE skoda_auxiliary_heating_duration_seconds gauge
+skoda_auxiliary_heating_duration_seconds{vin="TMBJB9NY5RF999999"} 600
+# HELP skoda_auxiliary_heating_start_mode Auxiliary heating start mode; 1 for the current mode.
+# TYPE skoda_auxiliary_heating_start_mode gauge
+skoda_auxiliary_heating_start_mode{mode="HEATING",vin="TMBJB9NY5RF999999"} 1
+skoda_auxiliary_heating_start_mode{mode="VENTILATION",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_auxiliary_heating_state Auxiliary heating state; 1 for the current state.
+# TYPE skoda_auxiliary_heating_state gauge
+skoda_auxiliary_heating_state{state="HEATING_AUXILIARY",vin="TMBJB9NY5RF999999"} 1
+skoda_auxiliary_heating_state{state="OFF",vin="TMBJB9NY5RF999999"} 0
+skoda_auxiliary_heating_state{state="PREHEATING",vin="TMBJB9NY5RF999999"} 0
+skoda_auxiliary_heating_state{state="UNKNOWN",vin="TMBJB9NY5RF999999"} 0
+skoda_auxiliary_heating_state{state="UNSUPPORTED",vin="TMBJB9NY5RF999999"} 0
+skoda_auxiliary_heating_state{state="VENTILATION",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_auxiliary_heating_target_reached_timestamp_seconds When the cabin is expected to reach the auxiliary heating target temperature, as Unix time.
+# TYPE skoda_auxiliary_heating_target_reached_timestamp_seconds gauge
+skoda_auxiliary_heating_target_reached_timestamp_seconds{vin="TMBJB9NY5RF999999"} 1.7918772e+09
+# HELP skoda_auxiliary_heating_target_temperature_celsius Auxiliary heating target temperature.
+# TYPE skoda_auxiliary_heating_target_temperature_celsius gauge
+skoda_auxiliary_heating_target_temperature_celsius{vin="TMBJB9NY5RF999999"} 22.22222222222222
 # HELP skoda_battery_range_meters Remaining electric range.
 # TYPE skoda_battery_range_meters gauge
 skoda_battery_range_meters{vin="TMBJB9NY5RF999999"} 249000
@@ -70,3 +120,18 @@ skoda_up{vin="TMBJB9NY5RF999999"} 1
 # HELP skoda_vehicle_info Vehicle metadata; always 1.
 # TYPE skoda_vehicle_info gauge
 skoda_vehicle_info{license_plate="1AB 2345",name="My Enyaq",vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_window_heating_enabled 1 if window heating is enabled.
+# TYPE skoda_window_heating_enabled gauge
+skoda_window_heating_enabled{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_window_heating_front_state Front window heating state; 1 for the current state.
+# TYPE skoda_window_heating_front_state gauge
+skoda_window_heating_front_state{state="OFF",vin="TMBJB9NY5RF999999"} 0
+skoda_window_heating_front_state{state="ON",vin="TMBJB9NY5RF999999"} 1
+skoda_window_heating_front_state{state="UNKNOWN",vin="TMBJB9NY5RF999999"} 0
+skoda_window_heating_front_state{state="UNSUPPORTED",vin="TMBJB9NY5RF999999"} 0
+# HELP skoda_window_heating_rear_state Rear window heating state; 1 for the current state.
+# TYPE skoda_window_heating_rear_state gauge
+skoda_window_heating_rear_state{state="OFF",vin="TMBJB9NY5RF999999"} 1
+skoda_window_heating_rear_state{state="ON",vin="TMBJB9NY5RF999999"} 0
+skoda_window_heating_rear_state{state="UNKNOWN",vin="TMBJB9NY5RF999999"} 0
+skoda_window_heating_rear_state{state="UNSUPPORTED",vin="TMBJB9NY5RF999999"} 0

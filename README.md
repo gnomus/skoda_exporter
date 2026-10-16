@@ -98,6 +98,20 @@ All vehicle metrics are gauges with a `vin` label.
 | `skoda_charging_profile_target_soc_ratio` | `chargingProfiles.currentVehiclePositionProfile.targetStateOfChargeInPercent` / 100 |
 | `skoda_charging_in_saved_location` | `charging.isVehicleInSavedLocation` |
 | `skoda_air_conditioning_state{state}` | `airConditioning.state`, 1 for the current value |
+| `skoda_air_conditioning_target_temperature_celsius` | `airConditioning.targetTemperature` (Fahrenheit converted) |
+| `skoda_air_conditioning_target_reached_timestamp_seconds` | `airConditioning.estimatedReachOfTargetTemperatureAt` |
+| `skoda_air_conditioning_without_external_power` | `airConditioning.airConditioningWithoutExternalPower` |
+| `skoda_air_conditioning_at_unlock` | `airConditioning.airConditioningAtUnlock` |
+| `skoda_window_heating_enabled` | `airConditioning.windowHeating.enabled` |
+| `skoda_window_heating_front_state{state}` | `airConditioning.windowHeating.front`, 1 for the current value |
+| `skoda_window_heating_rear_state{state}` | `airConditioning.windowHeating.rear`, 1 for the current value |
+| `skoda_auxiliary_heating_state{state}` | `auxiliaryHeating.state`, 1 for the current value |
+| `skoda_auxiliary_heating_start_mode{mode}` | `auxiliaryHeating.startMode`, 1 for the current value |
+| `skoda_auxiliary_heating_duration_seconds` | `auxiliaryHeating.durationInSeconds` |
+| `skoda_auxiliary_heating_target_temperature_celsius` | `auxiliaryHeating.targetTemperature` (Fahrenheit converted) |
+| `skoda_auxiliary_heating_target_reached_timestamp_seconds` | `auxiliaryHeating.estimatedReachOfTargetTemperatureAt` |
+| `skoda_active_ventilation_state{state}` | `activeVentilation.state`, 1 for the current value |
+| `skoda_active_ventilation_duration_seconds` | `activeVentilation.durationInSeconds` |
 | `skoda_doors_locked` | `status.overall.doorsLocked` |
 
 Exporter health:
@@ -117,7 +131,7 @@ Exporter health:
 
 The field names come from the API docs page, its changelog and evcc's client; the
 OpenAPI spec itself has not been checked yet. Not exported yet: window and light
-status, fuel level, auxiliary heating, active ventilation and parking position
+status, fuel level and parking position
 (position will be opt-in).
 
 ## Development

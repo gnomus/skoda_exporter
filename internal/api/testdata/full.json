@@ -5,7 +5,22 @@
     "licensePlate": "1AB 2345",
     "status": { "overall": { "doorsLocked": "YES" } },
     "odometer": { "mileageInKm": 12753 },
-    "airConditioning": { "state": "HEATING" },
+    "airConditioning": {
+      "state": "HEATING",
+      "targetTemperature": { "value": 22.5, "unit": "CELSIUS" },
+      "estimatedReachOfTargetTemperatureAt": "2026-10-13T07:30:00Z",
+      "airConditioningWithoutExternalPower": true,
+      "airConditioningAtUnlock": false,
+      "windowHeating": { "enabled": true, "front": "ON", "rear": "OFF" }
+    },
+    "auxiliaryHeating": {
+      "state": "HEATING_AUXILIARY",
+      "startMode": "HEATING",
+      "durationInSeconds": 600,
+      "targetTemperature": { "value": 72, "unit": "FAHRENHEIT" },
+      "estimatedReachOfTargetTemperatureAt": "2026-10-13T07:40:00Z"
+    },
+    "activeVentilation": { "state": "VENTILATION", "durationInSeconds": 300 },
     "charging": {
       "isVehicleInSavedLocation": true,
       "status": {
