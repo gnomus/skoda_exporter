@@ -4,7 +4,6 @@ package main
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"log/slog"
 	"net"
@@ -38,7 +37,7 @@ type config struct {
 }
 
 func main() {
-	cfg := parseFlags(os.Args[1:])
+	cfg := loadConfig()
 
 	var level slog.Level
 	if err := level.UnmarshalText([]byte(cfg.logLevel)); err != nil {
@@ -53,7 +52,7 @@ func main() {
 	}
 	cfg.vin = strings.TrimSpace(cfg.vin)
 	if cfg.vin == "" {
-		fatal("configuration", errors.New("no VIN: set SKODA_VIN or -vin"))
+		fatal("configuration", errors.New("no VIN: set SKODA_VIN"))
 	}
 	if cfg.interval < poller.MinInterval {
 		logger.Warn("poll interval raised to stay under the API rate limit", "requested", cfg.interval, "used", poller.MinInterval)
@@ -121,20 +120,18 @@ func main() {
 	}
 }
 
-func parseFlags(args []string) config {
-	var cfg config
-	fs := flag.NewFlagSet("skoda-exporter", flag.ExitOnError)
-	fs.StringVar(&cfg.apiKey, "api-key", env("SKODA_API_KEY", ""), "MyŠkoda API key (env SKODA_API_KEY); prefer -api-key-file")
-	fs.StringVar(&cfg.apiKeyFile, "api-key-file", env("SKODA_API_KEY_FILE", ""), "file holding the API key (env SKODA_API_KEY_FILE)")
-	fs.StringVar(&cfg.vin, "vin", env("SKODA_VIN", ""), "VIN to poll (env SKODA_VIN)")
-	fs.DurationVar(&cfg.interval, "poll-interval", envDuration("SKODA_POLL_INTERVAL", 5*time.Minute), "time between calls, at least 4m (env SKODA_POLL_INTERVAL)")
-	fs.StringVar(&cfg.include, "include", env("SKODA_INCLUDE", ""), "comma-separated response parts; empty means all (env SKODA_INCLUDE)")
-	fs.StringVar(&cfg.baseURL, "base-url", env("SKODA_BASE_URL", api.ProductionURL), "API base URL; "+api.SandboxURL+" for the sandbox (env SKODA_BASE_URL)")
-	fs.StringVar(&cfg.listenAddr, "listen-address", env("LISTEN_ADDR", ":9877"), "address for /metrics (env LISTEN_ADDR)")
-	fs.DurationVar(&cfg.staleAfter, "stale-after", envDuration("SKODA_STALE_AFTER", time.Hour), "drop vehicle metrics when the last success is older (env SKODA_STALE_AFTER)")
-	fs.StringVar(&cfg.logLevel, "log-level", env("LOG_LEVEL", "info"), "debug, info, warn or error (env LOG_LEVEL)")
-	_ = fs.Parse(args)
-	return cfg
+func loadConfig() config {
+	return config{
+		apiKey:     env("SKODA_API_KEY", ""),
+		apiKeyFile: env("SKODA_API_KEY_FILE", ""),
+		vin:        env("SKODA_VIN", ""),
+		interval:   envDuration("SKODA_POLL_INTERVAL", 5*time.Minute),
+		include:    env("SKODA_INCLUDE", ""),
+		baseURL:    env("SKODA_BASE_URL", api.ProductionURL),
+		listenAddr: env("LISTEN_ADDR", ":9877"),
+		staleAfter: envDuration("SKODA_STALE_AFTER", time.Hour),
+		logLevel:   env("LOG_LEVEL", "info"),
+	}
 }
 
 func loadKey(cfg config) (string, error) {
