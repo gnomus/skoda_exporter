@@ -11,16 +11,14 @@ interval doesn't affect the API's limit of 20 calls per hour per VIN.
 2. Run:
 
 ```sh
-echo -n 'your-key' > api-key.txt
-SKODA_API_KEY_FILE=api-key.txt SKODA_VIN=TMB... go run ./cmd/skoda-exporter
+SKODA_API_KEY=your-key SKODA_VIN=TMB... go run ./cmd/skoda-exporter
 curl localhost:9877/metrics
 ```
 
 Or with Docker Compose (exporter + Prometheus with alert rules):
 
 ```sh
-cp api-key.txt deploy/
-# edit SKODA_VIN in deploy/docker-compose.yml
+# set SKODA_API_KEY and SKODA_VIN in deploy/docker-compose.yml
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
@@ -54,8 +52,7 @@ Configuration is read from environment variables only.
 
 | Env var | Default | Meaning |
 | --- | --- | --- |
-| `SKODA_API_KEY_FILE` | | File holding the API key (preferred) |
-| `SKODA_API_KEY` | | API key, if no file is used |
+| `SKODA_API_KEY` | | API key (required) |
 | `SKODA_VIN` | | VIN to poll (required) |
 | `SKODA_POLL_INTERVAL` | `5m` | Time between calls; raised to `4m` if lower |
 | `SKODA_INCLUDE` | all | Comma-separated response parts to request |
