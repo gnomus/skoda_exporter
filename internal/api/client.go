@@ -102,7 +102,7 @@ func (c *Client) Vehicle(ctx context.Context, vin string, include []string) (*Ve
 	if err != nil {
 		return nil, Meta{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	meta := c.parseMeta(resp)
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
