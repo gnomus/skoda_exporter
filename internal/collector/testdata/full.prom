@@ -81,9 +81,6 @@ skoda_charging_plug_locked{vin="TMBJB9NY5RF999999"} 1
 # HELP skoda_charging_power_watts Current charging power.
 # TYPE skoda_charging_power_watts gauge
 skoda_charging_power_watts{vin="TMBJB9NY5RF999999"} 20160
-# HELP skoda_charging_profile_target_soc_ratio Charging limit of the profile at the vehicle's current location, 0 to 1.
-# TYPE skoda_charging_profile_target_soc_ratio gauge
-skoda_charging_profile_target_soc_ratio{vin="TMBJB9NY5RF999999"} 0.8
 # HELP skoda_charging_rate_meters_per_hour Range added per hour of charging.
 # TYPE skoda_charging_rate_meters_per_hour gauge
 skoda_charging_rate_meters_per_hour{vin="TMBJB9NY5RF999999"} 120500

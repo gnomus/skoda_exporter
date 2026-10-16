@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -98,6 +99,12 @@ func main() {
 	})
 	srv := &http.Server{Addr: cfg.listenAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
+	// Bind before polling so a port clash does not waste API quota.
+	ln, err := net.Listen("tcp", cfg.listenAddr)
+	if err != nil {
+		fatal("listen", err)
+	}
+
 	go p.Run(ctx)
 	go func() {
 		<-ctx.Done()
@@ -109,7 +116,7 @@ func main() {
 	}()
 
 	logger.Info("starting", "listen", cfg.listenAddr, "vin", cfg.vin, "interval", cfg.interval, "base_url", cfg.baseURL)
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal("http server", err)
 	}
 }

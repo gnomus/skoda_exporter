@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,9 +65,6 @@ func TestVehicleFull(t *testing.T) {
 	}
 	if got := *v.Charging.Status.Battery.StateOfChargeInPercent; got != 71 {
 		t.Errorf("soc = %v", got)
-	}
-	if got := *v.ChargingProfiles.CurrentVehiclePositionProfile.TargetStateOfChargeInPercent; got != 80 {
-		t.Errorf("profile target = %v", got)
 	}
 	if got := *v.AirConditioning.TargetTemperature.Value; got != 22.5 {
 		t.Errorf("ac target = %v", got)
@@ -186,5 +184,28 @@ func TestParseTimestamp(t *testing.T) {
 	}
 	if got := parseTimestamp("nope"); !got.IsZero() {
 		t.Errorf("parseTimestamp(nope) = %v", got)
+	}
+}
+
+func TestDecodeRealResponse(t *testing.T) {
+	var res VehicleResponse
+	if err := json.Unmarshal(fixture(t, "real.json"), &res); err != nil {
+		t.Fatal(err)
+	}
+	v := res.Vehicle
+	if got := *v.Status.Overall.DoorsLocked; got != "YES" {
+		t.Errorf("doorsLocked = %q", got)
+	}
+	if got := *v.Odometer.MileageInKm; got != 41645 {
+		t.Errorf("mileage = %v", got)
+	}
+	if got := *v.Charging.Status.Battery.StateOfChargeInPercent; got != 38 {
+		t.Errorf("soc = %v", got)
+	}
+	if got := *v.Charging.Status.Battery.RemainingCruisingRangeInMeters; got != 158000 {
+		t.Errorf("range = %v", got)
+	}
+	if got := *v.Charging.Status.State; got != "CONNECT_CABLE" {
+		t.Errorf("state = %q", got)
 	}
 }

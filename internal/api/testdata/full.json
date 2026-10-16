@@ -42,9 +42,6 @@
         "maxChargeCurrentAc": "MAXIMUM",
         "maxChargeCurrentAcAmpere": 16
       }
-    },
-    "chargingProfiles": {
-      "currentVehiclePositionProfile": { "targetStateOfChargeInPercent": 80 }
     }
   },
   "errors": []

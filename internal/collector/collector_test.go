@@ -188,18 +188,39 @@ func TestUnknownEnumValueIsExported(t *testing.T) {
 
 func TestParseLocked(t *testing.T) {
 	for in, want := range map[string]struct{ locked, ok bool }{
-		`true`:       {true, true},
-		`false`:      {false, true},
-		`"YES"`:      {true, true},
-		`"no"`:       {false, true},
-		`"UNLOCKED"`: {false, true},
-		`"UNKNOWN"`:  {false, false},
-		``:           {false, false},
-		`3`:          {false, false},
+		"YES":      {true, true},
+		"locked":   {true, true},
+		"no":       {false, true},
+		"UNLOCKED": {false, true},
+		"UNKNOWN":  {false, false},
+		"":         {false, false},
 	} {
-		locked, ok := parseLocked(json.RawMessage(in))
+		locked, ok := parseLocked(in)
 		if locked != want.locked || ok != want.ok {
-			t.Errorf("parseLocked(%s) = %v, %v", in, locked, ok)
+			t.Errorf("parseLocked(%q) = %v, %v", in, locked, ok)
 		}
+	}
+}
+
+func TestDoorsLockedAbsentEmitsNoSeries(t *testing.T) {
+	res := load(t, "full.json")
+	res.Vehicle.Status.Overall.DoorsLocked = nil
+	_, c := setup(&fakeFetcher{res: res, meta: api.Meta{StatusCode: 200}})
+	if n := testutil.CollectAndCount(c, "skoda_doors_locked"); n != 0 {
+		t.Errorf("doors_locked series = %d, want 0", n)
+	}
+}
+
+func TestDuplicateErrorTypesGather(t *testing.T) {
+	res := load(t, "full.json")
+	res.Errors = []api.PartError{{Type: "CHARGING_UNAVAILABLE"}, {Type: "CHARGING_UNAVAILABLE"}}
+	_, c := setup(&fakeFetcher{res: res, meta: api.Meta{StatusCode: 200}})
+	reg := prometheus.NewPedanticRegistry()
+	reg.MustRegister(c)
+	if _, err := reg.Gather(); err != nil {
+		t.Fatal(err)
+	}
+	if n := testutil.CollectAndCount(c, "skoda_api_part_errors"); n != 1 {
+		t.Errorf("part_errors series = %d, want 1", n)
 	}
 }

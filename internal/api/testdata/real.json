@@ -1,0 +1,175 @@
+{
+  "vehicle": {
+    "airConditioning": {
+      "state": "OFF",
+      "airConditioningAtUnlock": false,
+      "carCapturedTimestamp": "2026-09-16T16:51:13Z",
+      "targetTemperature": {
+        "value": 20.0,
+        "unit": "CELSIUS"
+      },
+      "windowHeating": {
+        "enabled": false,
+        "front": "OFF",
+        "rear": "OFF"
+      }
+    },
+    "charging": {
+      "isVehicleInSavedLocation": true,
+      "carCapturedTimestamp": "2026-09-16T16:51:13Z",
+      "settings": {
+        "autoUnlockPlugWhenCharged": "OFF",
+        "availableChargeModes": [
+          "MANUAL"
+        ],
+        "batteryCareModeTargetValueInPercent": 80,
+        "chargingCareMode": "ACTIVATED",
+        "maxChargeCurrentAc": "MAXIMUM",
+        "preferredChargeMode": "MANUAL",
+        "targetStateOfChargeInPercent": 80
+      },
+      "status": {
+        "battery": {
+          "remainingCruisingRangeInMeters": 158000,
+          "stateOfChargeInPercent": 38
+        },
+        "chargePowerInKw": 0.0,
+        "fullyChargedAt": "2026-09-16T16:51:13Z",
+        "remainingTimeToFullyChargedInMinutes": 0,
+        "state": "CONNECT_CABLE"
+      }
+    },
+    "chargingProfiles": {
+      "profiles": [
+        {
+          "id": 1,
+          "name": "Zuhause",
+          "settings": {
+            "autoUnlockPlugWhenCharged": "OFF",
+            "maxChargingCurrent": "MAXIMUM",
+            "minBatteryStateOfCharge": {
+              "minimumBatteryStateOfChargeInPercent": 50
+            },
+            "targetStateOfChargeInPercent": 80
+          },
+          "preferredChargingTimes": [
+            {
+              "id": 1,
+              "enabled": false,
+              "startTime": "22:00",
+              "endTime": "06:00"
+            },
+            {
+              "id": 2,
+              "enabled": false,
+              "startTime": "22:00",
+              "endTime": "06:00"
+            },
+            {
+              "id": 3,
+              "enabled": false,
+              "startTime": "22:00",
+              "endTime": "06:00"
+            },
+            {
+              "id": 4,
+              "enabled": false,
+              "startTime": "22:00",
+              "endTime": "06:00"
+            }
+          ],
+          "timers": [
+            {
+              "id": 1,
+              "enabled": false,
+              "type": "ONE_OFF",
+              "oneOffDay": "FRIDAY",
+              "time": "07:00"
+            },
+            {
+              "id": 2,
+              "enabled": false,
+              "type": "RECURRING",
+              "recurringOn": [
+                "SATURDAY",
+                "SUNDAY"
+              ],
+              "time": "09:00"
+            },
+            {
+              "id": 3,
+              "enabled": false,
+              "type": "RECURRING",
+              "recurringOn": [
+                "MONDAY",
+                "TUESDAY",
+                "WEDNESDAY",
+                "THURSDAY",
+                "FRIDAY",
+                "SATURDAY",
+                "SUNDAY"
+              ],
+              "time": "07:00"
+            }
+          ]
+        }
+      ],
+      "carCapturedTimestamp": "2026-09-16T16:51:09.639Z"
+    },
+    "licensePlate": "AB CD 123",
+    "name": "Enyaq",
+    "odometer": {
+      "mileageInKm": 41645,
+      "carCapturedTimestamp": "2026-09-16T16:51:18.682Z"
+    },
+    "operations": [
+      {
+        "name": "startCharging"
+      },
+      {
+        "name": "stopCharging"
+      },
+      {
+        "name": "setChargingLimit"
+      },
+      {
+        "name": "setChargeMode"
+      },
+      {
+        "name": "updateChargingProfile"
+      },
+      {
+        "name": "startAirConditioning"
+      },
+      {
+        "name": "stopAirConditioning"
+      }
+    ],
+    "parkingPosition": {
+      "state": "PARKED",
+      "formattedAddress": "Musterstraße 1, 12345 Musterstadt, Germany",
+      "gpsCoordinates": {
+        "latitude": 50.0,
+        "longitude": 10.0
+      }
+    },
+    "renderUrl": "https://example.com/render.png",
+    "status": {
+      "overall": {
+        "doorsLocked": "YES",
+        "locked": "YES",
+        "doors": "CLOSED",
+        "windows": "CLOSED",
+        "lights": "OFF",
+        "reliableLockStatus": "LOCKED"
+      },
+      "detail": {
+        "sunroof": "UNSUPPORTED",
+        "trunk": "CLOSED",
+        "bonnet": "CLOSED"
+      },
+      "carCapturedTimestamp": "2026-09-16T16:51:18.67Z"
+    },
+    "vin": "TMBJB9NY5RF999999"
+  }
+}

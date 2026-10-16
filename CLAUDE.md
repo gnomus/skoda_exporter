@@ -27,10 +27,10 @@ Data flows `api` → `poller.Store` → `collector`, wired in `cmd/skoda-exporte
 
 ## Testing
 
-- Fixtures: `internal/api/testdata/{full,partial}.json` (sample API responses, also loaded by collector tests). Time is injected via `Now func() time.Time` fields on `Poller` and `Collector`.
+- Fixtures: `internal/api/testdata/{full,partial}.json` (sample API responses, also loaded by collector tests) and `real.json` (anonymized real response). Time is injected via `Now func() time.Time` fields on `Poller` and `Collector`.
 - `internal/collector/testdata/full.prom` is the golden output for `full.json`; update it by hand when adding or changing a metric, and keep the metrics table in README.md in sync.
 
 ## Notes
 
-- Field names come from the API docs page/changelog and evcc's client, not the OpenAPI spec; `doorsLocked` is a `json.RawMessage` because its type (bool vs enum string) is unconfirmed — see `parseLocked`.
+- Field names come from the API docs page/changelog and evcc's client, not the OpenAPI spec; `doorsLocked` is a string enum (YES/NO…, confirmed from a real response) — see `parseLocked`.
 - README.md refers to a `deploy/` directory (docker-compose, alerts, Kustomize/Flux manifests) that is not in the repo yet.
