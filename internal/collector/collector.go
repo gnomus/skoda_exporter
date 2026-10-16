@@ -129,10 +129,10 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		}
 		temp(ch, descACTemp, vin, ac.TargetTemperature)
 		ts(ch, descACReach, vin, ac.EstimatedReachOfTargetTemperatureAt)
-		flag(ch, descACNoPower, vin, ac.AirConditioningWithoutExternalPower)
-		flag(ch, descACAtUnlock, vin, ac.AirConditioningAtUnlock)
+		bit(ch, descACNoPower, vin, ac.AirConditioningWithoutExternalPower)
+		bit(ch, descACAtUnlock, vin, ac.AirConditioningAtUnlock)
 		if w := ac.WindowHeating; w != nil {
-			flag(ch, descWindowEnabled, vin, w.Enabled)
+			bit(ch, descWindowEnabled, vin, w.Enabled)
 			if w.Front != nil {
 				enum(ch, descWindowFront, vin, *w.Front, windowStates)
 			}
@@ -251,12 +251,17 @@ func ts(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, s *string) 
 	if s == nil {
 		return
 	}
-	if t, err := time.Parse(time.RFC3339, *s); err == nil {
+	t, err := time.Parse(time.RFC3339, *s)
+	if err != nil {
+		// The spec's examples omit seconds, e.g. 2026-06-12T07:30Z.
+		t, err = time.Parse("2006-01-02T15:04Z07:00", *s)
+	}
+	if err == nil {
 		ch <- gauge(d, unix(t), vin)
 	}
 }
 
-func flag(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, b *bool) {
+func bit(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, b *bool) {
 	if b != nil {
 		ch <- gauge(d, b2f(*b), vin)
 	}

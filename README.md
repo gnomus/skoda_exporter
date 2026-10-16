@@ -130,7 +130,10 @@ Exporter health:
 ## Known gaps
 
 The field names come from the API docs page, its changelog and evcc's client; the
-OpenAPI spec itself has not been checked yet. Not exported yet: window and light
+climate fields (air conditioning, window heating, auxiliary heating, active
+ventilation) were checked against the OpenAPI spec, the rest have not been yet.
+`skoda_air_conditioning_state` emits every known state as 0/1, plus any unknown
+current value. Not exported yet: window and light
 status, fuel level and parking position
 (position will be opt-in).
 
