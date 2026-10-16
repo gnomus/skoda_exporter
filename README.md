@@ -31,7 +31,7 @@ namespace, ConfigMap, Deployment, Service, ServiceMonitor and PrometheusRule.
 `deploy/kubernetes/flux/skoda-exporter.yaml` holds the Flux `GitRepository` and
 `Kustomization` that apply it.
 
-1. Push a `v*` tag so CI publishes `ghcr.io/OWNER/skoda-exporter:<version>`, then set
+1. Push a `v*` tag so CI publishes `ghcr.io/OWNER/skoda_exporter:<version>`, then set
    that image in `deployment.yaml` (replace `OWNER`). If the package is private, add an
    `imagePullSecrets` entry.
 2. Put your VIN in `configmap.yaml`.

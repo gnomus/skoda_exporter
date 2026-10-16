@@ -37,7 +37,7 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/skoda-exporter
+          images: ghcr.io/${{ github.repository }}
           # v1.2.3 tags become 1.2.3; main becomes "main" and sha-<short>.
           tags: |
             type=semver,pattern={{version}}
