@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -11,8 +12,55 @@ import (
 	"skoda-exporter/internal/api"
 	"skoda-exporter/internal/poller"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/testutil"
+	dto "github.com/prometheus/client_model/go"
 )
+
+func TestTimestampFormats(t *testing.T) {
+	for in, want := range map[string]int{
+		"2026-06-12T07:30:00Z": 1,
+		"2026-06-12T07:30Z":    1,
+		"garbage":              0,
+	} {
+		ch := make(chan prometheus.Metric, 1)
+		ts(ch, descACReach, vin, &in)
+		if got := len(ch); got != want {
+			t.Errorf("ts(%q) emitted %d, want %d", in, got, want)
+		}
+	}
+}
+
+func TestTemp(t *testing.T) {
+	f32, c20 := 32.0, 20.0
+	cel, fah, kel := "CELSIUS", "FAHRENHEIT", "KELVIN"
+	for name, tc := range map[string]struct {
+		in   *api.Temperature
+		want []float64
+	}{
+		"nil":        {nil, nil},
+		"fahrenheit": {&api.Temperature{Value: &f32, Unit: &fah}, []float64{0}},
+		"celsius":    {&api.Temperature{Value: &c20, Unit: &cel}, []float64{20}},
+		"kelvin":     {&api.Temperature{Value: &c20, Unit: &kel}, nil},
+		"nil unit":   {&api.Temperature{Value: &c20}, nil},
+		"nil value":  {&api.Temperature{Unit: &cel}, nil},
+	} {
+		ch := make(chan prometheus.Metric, 1)
+		temp(ch, descACTemp, vin, tc.in)
+		close(ch)
+		var got []float64
+		for m := range ch {
+			var pb dto.Metric
+			if err := m.Write(&pb); err != nil {
+				t.Fatal(err)
+			}
+			got = append(got, pb.GetGauge().GetValue())
+		}
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("%s: got %v, want %v", name, got, tc.want)
+		}
+	}
+}
 
 const vin = "TMBJB9NY5RF999999"
 
@@ -82,6 +130,17 @@ skoda_odometer_meters{vin="TMBJB9NY5RF999999"} 1.2753e+07
 	}
 	if n := testutil.CollectAndCount(c, "skoda_battery_soc_ratio", "skoda_charging_state", "skoda_charging_power_watts"); n != 0 {
 		t.Errorf("got %d charging series, want 0", n)
+	}
+	// partial.json has no climate sections at all.
+	if n := testutil.CollectAndCount(c,
+		"skoda_air_conditioning_state", "skoda_air_conditioning_target_temperature_celsius",
+		"skoda_air_conditioning_target_reached_timestamp_seconds", "skoda_air_conditioning_without_external_power",
+		"skoda_air_conditioning_at_unlock", "skoda_window_heating_enabled", "skoda_window_heating_front_state",
+		"skoda_window_heating_rear_state", "skoda_auxiliary_heating_state", "skoda_auxiliary_heating_start_mode",
+		"skoda_auxiliary_heating_duration_seconds", "skoda_auxiliary_heating_target_temperature_celsius",
+		"skoda_auxiliary_heating_target_reached_timestamp_seconds", "skoda_active_ventilation_state",
+		"skoda_active_ventilation_duration_seconds"); n != 0 {
+		t.Errorf("got %d climate series, want 0", n)
 	}
 }
 
