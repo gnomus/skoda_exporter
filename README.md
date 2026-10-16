@@ -1,7 +1,7 @@
 # skoda-exporter
 
 Prometheus exporter for the [MyŠkoda public API](https://public.api.connect.skoda-auto.cz/docs).
-It polls `GET /api/v1/vehicles/{vin}` for each configured VIN in the background and
+It polls `GET /api/v1/vehicles/{vin}` for the configured VIN in the background and
 serves the latest result on `/metrics`. Scrapes never call the API, so the scrape
 interval doesn't affect the API's limit of 20 calls per hour per VIN.
 
@@ -12,7 +12,7 @@ interval doesn't affect the API's limit of 20 calls per hour per VIN.
 
 ```sh
 echo -n 'your-key' > api-key.txt
-SKODA_API_KEY_FILE=api-key.txt SKODA_VINS=TMB... go run ./cmd/skoda-exporter
+SKODA_API_KEY_FILE=api-key.txt SKODA_VIN=TMB... go run ./cmd/skoda-exporter
 curl localhost:9877/metrics
 ```
 
@@ -20,7 +20,7 @@ Or with Docker Compose (exporter + Prometheus with alert rules):
 
 ```sh
 cp api-key.txt deploy/
-# edit SKODA_VINS in deploy/docker-compose.yml
+# edit SKODA_VIN in deploy/docker-compose.yml
 docker compose -f deploy/docker-compose.yml up -d
 ```
 
@@ -34,7 +34,7 @@ namespace, ConfigMap, Deployment, Service, ServiceMonitor and PrometheusRule.
 1. Push a `v*` tag so CI publishes `ghcr.io/OWNER/skoda-exporter:<version>`, then set
    that image in `deployment.yaml` (replace `OWNER`). If the package is private, add an
    `imagePullSecrets` entry.
-2. Put your VINs in `configmap.yaml`.
+2. Put your VIN in `configmap.yaml`.
 3. Create the API key secret with SOPS (Flux decrypts it with the `sops-age` secret):
    ```sh
    cp deploy/kubernetes/secret.example.yaml deploy/kubernetes/secret.sops.yaml
@@ -56,7 +56,7 @@ Every option is an environment variable and a flag.
 | --- | --- | --- | --- |
 | `SKODA_API_KEY_FILE` | `-api-key-file` | | File holding the API key (preferred) |
 | `SKODA_API_KEY` | `-api-key` | | API key, if no file is used |
-| `SKODA_VINS` | `-vins` | | Comma-separated VINs (required) |
+| `SKODA_VIN` | `-vin` | | VIN to poll (required) |
 | `SKODA_POLL_INTERVAL` | `-poll-interval` | `5m` | Time between calls per VIN; raised to `4m` if lower |
 | `SKODA_INCLUDE` | `-include` | all | Comma-separated response parts to request |
 | `SKODA_BASE_URL` | `-base-url` | production | Use `https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox |

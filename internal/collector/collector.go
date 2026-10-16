@@ -76,17 +76,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		ch <- prometheus.MustNewConstMetric(descKeyExpiry, prometheus.GaugeValue, unix(t))
 	}
 
-	for _, s := range c.Store.Snapshots() {
+	{
+		s := c.Store.Snapshot()
 		ch <- gauge(descUp, b2f(s.Up), s.VIN)
 		if s.RateLimitRemaining != nil {
 			ch <- gauge(descRateLimit, float64(*s.RateLimitRemaining), s.VIN)
 		}
 		if s.Response == nil {
-			continue
+			return
 		}
 		ch <- gauge(descLastSuccess, unix(s.LastSuccess), s.VIN)
 		if c.StaleAfter > 0 && now().Sub(s.LastSuccess) > c.StaleAfter {
-			continue
+			return
 		}
 		collectVehicle(ch, s.VIN, s.Response)
 	}
