@@ -19,14 +19,16 @@ type PartError struct {
 }
 
 type Vehicle struct {
-	VIN              string            `json:"vin"`
-	Name             string            `json:"name"`
-	LicensePlate     string            `json:"licensePlate"`
-	Status           *VehicleStatus    `json:"status"`
-	Odometer         *Odometer         `json:"odometer"`
-	AirConditioning  *AirConditioning  `json:"airConditioning"`
-	Charging         *Charging         `json:"charging"`
-	ChargingProfiles *ChargingProfiles `json:"chargingProfiles"`
+	VIN               string             `json:"vin"`
+	Name              string             `json:"name"`
+	LicensePlate      string             `json:"licensePlate"`
+	Status            *VehicleStatus     `json:"status"`
+	Odometer          *Odometer          `json:"odometer"`
+	AirConditioning   *AirConditioning   `json:"airConditioning"`
+	AuxiliaryHeating  *AuxiliaryHeating  `json:"auxiliaryHeating"`
+	ActiveVentilation *ActiveVentilation `json:"activeVentilation"`
+	Charging          *Charging          `json:"charging"`
+	ChargingProfiles  *ChargingProfiles  `json:"chargingProfiles"`
 }
 
 type VehicleStatus struct {
@@ -44,7 +46,36 @@ type Odometer struct {
 }
 
 type AirConditioning struct {
-	State *string `json:"state"`
+	State                               *string        `json:"state"`
+	TargetTemperature                   *Temperature   `json:"targetTemperature"`
+	EstimatedReachOfTargetTemperatureAt *string        `json:"estimatedReachOfTargetTemperatureAt"`
+	AirConditioningWithoutExternalPower *bool          `json:"airConditioningWithoutExternalPower"`
+	AirConditioningAtUnlock             *bool          `json:"airConditioningAtUnlock"`
+	WindowHeating                       *WindowHeating `json:"windowHeating"`
+}
+
+type Temperature struct {
+	Value *float64 `json:"value"`
+	Unit  *string  `json:"unit"`
+}
+
+type WindowHeating struct {
+	Enabled *bool   `json:"enabled"`
+	Front   *string `json:"front"`
+	Rear    *string `json:"rear"`
+}
+
+type AuxiliaryHeating struct {
+	State                               *string      `json:"state"`
+	StartMode                           *string      `json:"startMode"`
+	DurationInSeconds                   *float64     `json:"durationInSeconds"`
+	TargetTemperature                   *Temperature `json:"targetTemperature"`
+	EstimatedReachOfTargetTemperatureAt *string      `json:"estimatedReachOfTargetTemperatureAt"`
+}
+
+type ActiveVentilation struct {
+	State             *string  `json:"state"`
+	DurationInSeconds *float64 `json:"durationInSeconds"`
 }
 
 type Charging struct {

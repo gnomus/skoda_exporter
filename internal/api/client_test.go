@@ -68,6 +68,15 @@ func TestVehicleFull(t *testing.T) {
 	if got := *v.ChargingProfiles.CurrentVehiclePositionProfile.TargetStateOfChargeInPercent; got != 80 {
 		t.Errorf("profile target = %v", got)
 	}
+	if got := *v.AirConditioning.TargetTemperature.Value; got != 22.5 {
+		t.Errorf("ac target = %v", got)
+	}
+	if got := *v.AuxiliaryHeating.TargetTemperature.Unit; got != "FAHRENHEIT" {
+		t.Errorf("aux unit = %v", got)
+	}
+	if got := *v.ActiveVentilation.DurationInSeconds; got != 300 {
+		t.Errorf("ventilation duration = %v", got)
+	}
 }
 
 func TestVehiclePartial(t *testing.T) {

@@ -20,6 +20,12 @@ import (
 var (
 	chargingStates = []string{"CHARGING", "CONSERVING", "READY_FOR_CHARGING", "CHARGING_INTERRUPTED", "DISCHARGING", "CONNECT_CABLE"}
 	chargeTypes    = []string{"AC", "DC"}
+
+	acStates     = []string{"OFF", "COOLING", "HEATING", "HEATING_AUXILIARY", "VENTILATION", "COMPLETED", "UNKNOWN", "UNSUPPORTED"}
+	auxStates    = []string{"OFF", "PREHEATING", "HEATING_AUXILIARY", "VENTILATION", "UNKNOWN", "UNSUPPORTED"}
+	auxModes     = []string{"HEATING", "VENTILATION"}
+	ventStates   = []string{"OFF", "PREHEATING", "VENTILATION", "UNKNOWN", "UNSUPPORTED"}
+	windowStates = []string{"ON", "OFF", "UNKNOWN", "UNSUPPORTED"}
 )
 
 func desc(name, help string, labels ...string) *prometheus.Desc {
@@ -45,6 +51,20 @@ var (
 	descProfileTarget  = desc("charging_profile_target_soc_ratio", "Charging limit of the profile at the vehicle's current location, 0 to 1.")
 	descSavedLocation  = desc("charging_in_saved_location", "1 if the vehicle is at a saved charging location.")
 	descAirConditioner = desc("air_conditioning_state", "Air conditioning state; 1 for the current state.", "state")
+	descACTemp         = desc("air_conditioning_target_temperature_celsius", "Air conditioning target temperature.")
+	descACReach        = desc("air_conditioning_target_reached_timestamp_seconds", "When the cabin is expected to reach the target temperature, as Unix time.")
+	descACNoPower      = desc("air_conditioning_without_external_power", "1 if air conditioning is allowed without external power.")
+	descACAtUnlock     = desc("air_conditioning_at_unlock", "1 if air conditioning starts at unlock.")
+	descWindowEnabled  = desc("window_heating_enabled", "1 if window heating is enabled.")
+	descWindowFront    = desc("window_heating_front_state", "Front window heating state; 1 for the current state.", "state")
+	descWindowRear     = desc("window_heating_rear_state", "Rear window heating state; 1 for the current state.", "state")
+	descAuxState       = desc("auxiliary_heating_state", "Auxiliary heating state; 1 for the current state.", "state")
+	descAuxMode        = desc("auxiliary_heating_start_mode", "Auxiliary heating start mode; 1 for the current mode.", "mode")
+	descAuxDuration    = desc("auxiliary_heating_duration_seconds", "Auxiliary heating run time when started.")
+	descAuxTemp        = desc("auxiliary_heating_target_temperature_celsius", "Auxiliary heating target temperature.")
+	descAuxReach       = desc("auxiliary_heating_target_reached_timestamp_seconds", "When the cabin is expected to reach the auxiliary heating target temperature, as Unix time.")
+	descVentState      = desc("active_ventilation_state", "Active ventilation state; 1 for the current state.", "state")
+	descVentDuration   = desc("active_ventilation_duration_seconds", "Active ventilation run time when started.")
 	descDoorsLocked    = desc("doors_locked", "1 if the doors are locked.")
 
 	descUp          = desc("up", "1 if the last API call for this VIN succeeded.")
@@ -104,8 +124,40 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	if v.Odometer != nil {
 		opt(ch, descOdometer, v.Odometer.MileageInKm, 1000, vin)
 	}
-	if v.AirConditioning != nil && v.AirConditioning.State != nil {
-		enum(ch, descAirConditioner, vin, *v.AirConditioning.State, nil)
+	if ac := v.AirConditioning; ac != nil {
+		if ac.State != nil {
+			enum(ch, descAirConditioner, vin, *ac.State, acStates)
+		}
+		temp(ch, descACTemp, vin, ac.TargetTemperature)
+		ts(ch, descACReach, vin, ac.EstimatedReachOfTargetTemperatureAt)
+		flag(ch, descACNoPower, vin, ac.AirConditioningWithoutExternalPower)
+		flag(ch, descACAtUnlock, vin, ac.AirConditioningAtUnlock)
+		if w := ac.WindowHeating; w != nil {
+			flag(ch, descWindowEnabled, vin, w.Enabled)
+			if w.Front != nil {
+				enum(ch, descWindowFront, vin, *w.Front, windowStates)
+			}
+			if w.Rear != nil {
+				enum(ch, descWindowRear, vin, *w.Rear, windowStates)
+			}
+		}
+	}
+	if a := v.AuxiliaryHeating; a != nil {
+		if a.State != nil {
+			enum(ch, descAuxState, vin, *a.State, auxStates)
+		}
+		if a.StartMode != nil {
+			enum(ch, descAuxMode, vin, *a.StartMode, auxModes)
+		}
+		opt(ch, descAuxDuration, a.DurationInSeconds, 1, vin)
+		temp(ch, descAuxTemp, vin, a.TargetTemperature)
+		ts(ch, descAuxReach, vin, a.EstimatedReachOfTargetTemperatureAt)
+	}
+	if a := v.ActiveVentilation; a != nil {
+		if a.State != nil {
+			enum(ch, descVentState, vin, *a.State, ventStates)
+		}
+		opt(ch, descVentDuration, a.DurationInSeconds, 1, vin)
 	}
 	if v.Status != nil && v.Status.Overall != nil {
 		if locked, ok := parseLocked(v.Status.Overall.DoorsLocked); ok {
@@ -135,11 +187,7 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	opt(ch, descPower, st.ChargePowerInKw, 1000, vin)
 	opt(ch, descRate, st.ChargingRateInKilometersPerHour, 1000, vin)
 	opt(ch, descRemaining, st.RemainingTimeToFullyChargedInMinutes, 60, vin)
-	if st.FullyChargedAt != nil {
-		if t, err := time.Parse(time.RFC3339, *st.FullyChargedAt); err == nil {
-			ch <- gauge(descFullyAt, unix(t), vin)
-		}
-	}
+	ts(ch, descFullyAt, vin, st.FullyChargedAt)
 	if st.State != nil {
 		enum(ch, descState, vin, *st.State, chargingStates)
 	}
@@ -196,6 +244,35 @@ func enum(ch chan<- prometheus.Metric, d *prometheus.Desc, vin, current string, 
 	}
 	if !slices.Contains(known, current) {
 		ch <- gauge(d, 1, vin, current)
+	}
+}
+
+// ts emits an RFC 3339 timestamp as Unix seconds; unparsable values are dropped.
+func ts(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, s *string) {
+	if s == nil {
+		return
+	}
+	if t, err := time.Parse(time.RFC3339, *s); err == nil {
+		ch <- gauge(d, unix(t), vin)
+	}
+}
+
+func flag(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, b *bool) {
+	if b != nil {
+		ch <- gauge(d, b2f(*b), vin)
+	}
+}
+
+// temp emits a temperature in Celsius; an unknown unit emits nothing.
+func temp(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, t *api.Temperature) {
+	if t == nil || t.Value == nil || t.Unit == nil {
+		return
+	}
+	switch *t.Unit {
+	case "CELSIUS":
+		ch <- gauge(d, *t.Value, vin)
+	case "FAHRENHEIT":
+		ch <- gauge(d, (*t.Value-32)*5/9, vin)
 	}
 }
 
