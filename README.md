@@ -143,3 +143,10 @@ go test -race ./...
 ```
 
 Collector output is checked against `internal/collector/testdata/full.prom`.
+
+## AI usage
+
+Most of this code, its tests and this README were written by Claude (Anthropic's AI
+model) through Claude Code. A human maintainer directs the work, reviews the changes
+and merges every pull request. Commits that Claude wrote carry a `Co-Authored-By: Claude`
+trailer or have `Claude` as their author.
