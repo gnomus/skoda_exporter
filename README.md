@@ -95,7 +95,6 @@ All vehicle metrics are gauges with a `vin` label.
 | `skoda_charging_plug_locked` | `charging.status.plugLockState` |
 | `skoda_charging_target_soc_ratio` | `charging.settings.targetStateOfChargeInPercent` / 100 |
 | `skoda_charging_max_current_amperes` | `charging.settings.maxChargeCurrentAcAmpere` |
-| `skoda_charging_profile_target_soc_ratio` | `chargingProfiles.currentVehiclePositionProfile.targetStateOfChargeInPercent` / 100 |
 | `skoda_charging_in_saved_location` | `charging.isVehicleInSavedLocation` |
 | `skoda_air_conditioning_state{state}` | `airConditioning.state`, 1 for the current value |
 | `skoda_air_conditioning_target_temperature_celsius` | `airConditioning.targetTemperature` (Fahrenheit converted) |

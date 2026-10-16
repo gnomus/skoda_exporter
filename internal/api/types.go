@@ -1,7 +1,5 @@
 package api
 
-import "encoding/json"
-
 // VehicleResponse is the body of GET /api/v1/vehicles/{vin}.
 //
 // The API omits parts it cannot deliver and lists them in Errors, and any
@@ -28,7 +26,6 @@ type Vehicle struct {
 	AuxiliaryHeating  *AuxiliaryHeating  `json:"auxiliaryHeating"`
 	ActiveVentilation *ActiveVentilation `json:"activeVentilation"`
 	Charging          *Charging          `json:"charging"`
-	ChargingProfiles  *ChargingProfiles  `json:"chargingProfiles"`
 }
 
 type VehicleStatus struct {
@@ -36,9 +33,7 @@ type VehicleStatus struct {
 }
 
 type OverallStatus struct {
-	// DoorsLocked is kept raw because the spec could not be checked yet:
-	// it may be a boolean or an enum string.
-	DoorsLocked json.RawMessage `json:"doorsLocked"`
+	DoorsLocked *string `json:"doorsLocked"`
 }
 
 type Odometer struct {
@@ -106,14 +101,6 @@ type BatteryStatus struct {
 type ChargingSettings struct {
 	TargetStateOfChargeInPercent *float64 `json:"targetStateOfChargeInPercent"`
 	MaxChargeCurrentAcAmpere     *float64 `json:"maxChargeCurrentAcAmpere"`
-}
-
-type ChargingProfiles struct {
-	CurrentVehiclePositionProfile *ChargingProfile `json:"currentVehiclePositionProfile"`
-}
-
-type ChargingProfile struct {
-	TargetStateOfChargeInPercent *float64 `json:"targetStateOfChargeInPercent"`
 }
 
 // Problem is an RFC 9457 problem+json error body.

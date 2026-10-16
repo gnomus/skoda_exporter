@@ -3,7 +3,6 @@
 package collector
 
 import (
-	"encoding/json"
 	"slices"
 	"strings"
 	"time"
@@ -48,7 +47,6 @@ var (
 	descPlugLocked     = desc("charging_plug_locked", "1 if the charging plug is locked.")
 	descTargetSoc      = desc("charging_target_soc_ratio", "Global charging limit, 0 to 1.")
 	descMaxCurrent     = desc("charging_max_current_amperes", "Maximum AC charging current.")
-	descProfileTarget  = desc("charging_profile_target_soc_ratio", "Charging limit of the profile at the vehicle's current location, 0 to 1.")
 	descSavedLocation  = desc("charging_in_saved_location", "1 if the vehicle is at a saved charging location.")
 	descAirConditioner = desc("air_conditioning_state", "Air conditioning state; 1 for the current state.", "state")
 	descACTemp         = desc("air_conditioning_target_temperature_celsius", "Air conditioning target temperature.")
@@ -117,7 +115,12 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	v := res.Vehicle
 	ch <- gauge(descInfo, 1, vin, v.Name, v.LicensePlate)
 
+	seen := map[string]bool{}
 	for _, e := range res.Errors {
+		if seen[e.Type] {
+			continue
+		}
+		seen[e.Type] = true
 		ch <- gauge(descPartErrors, 1, vin, e.Type)
 	}
 
@@ -160,12 +163,11 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		opt(ch, descVentDuration, a.DurationInSeconds, 1, vin)
 	}
 	if v.Status != nil && v.Status.Overall != nil {
-		if locked, ok := parseLocked(v.Status.Overall.DoorsLocked); ok {
-			ch <- gauge(descDoorsLocked, b2f(locked), vin)
+		if d := v.Status.Overall.DoorsLocked; d != nil {
+			if locked, ok := parseLocked(*d); ok {
+				ch <- gauge(descDoorsLocked, b2f(locked), vin)
+			}
 		}
-	}
-	if v.ChargingProfiles != nil && v.ChargingProfiles.CurrentVehiclePositionProfile != nil {
-		opt(ch, descProfileTarget, v.ChargingProfiles.CurrentVehiclePositionProfile.TargetStateOfChargeInPercent, 0.01, vin)
 	}
 
 	chg := v.Charging
@@ -216,19 +218,8 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	}
 }
 
-// parseLocked reads doorsLocked as either a boolean or an enum string.
-func parseLocked(raw json.RawMessage) (locked, ok bool) {
-	if len(raw) == 0 {
-		return false, false
-	}
-	var b bool
-	if json.Unmarshal(raw, &b) == nil {
-		return b, true
-	}
-	var s string
-	if json.Unmarshal(raw, &s) != nil {
-		return false, false
-	}
+// parseLocked maps the doorsLocked enum string to a bool.
+func parseLocked(s string) (locked, ok bool) {
 	switch strings.ToUpper(s) {
 	case "YES", "TRUE", "LOCKED":
 		return true, true
