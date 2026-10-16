@@ -11,7 +11,7 @@ go vet ./...                                   # CI step
 go test -race ./...                            # CI step
 golangci-lint run                              # CI runs golangci-lint-action@v9 with default config (no .golangci.yml)
 go test ./internal/poller -run TestNextDelay   # single test
-SKODA_API_KEY_FILE=api-key.txt SKODA_VIN=TMB... go run ./cmd/skoda-exporter   # serves :9877/metrics
+SKODA_API_KEY=... SKODA_VIN=TMB... go run ./cmd/skoda-exporter   # serves :9877/metrics
 ```
 
 Use `SKODA_BASE_URL=https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox. CI tests every push to main and every PR, and builds an amd64 image to ghcr.io only for semver tags such as `1.2.3` (no `v` prefix).

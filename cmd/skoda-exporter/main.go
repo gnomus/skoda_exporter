@@ -26,7 +26,6 @@ import (
 
 type config struct {
 	apiKey     string
-	apiKeyFile string
 	vin        string
 	interval   time.Duration
 	include    string
@@ -46,9 +45,9 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
 	slog.SetDefault(logger)
 
-	key, err := loadKey(cfg)
-	if err != nil {
-		fatal("loading API key", err)
+	key := strings.TrimSpace(cfg.apiKey)
+	if key == "" {
+		fatal("configuration", errors.New("no API key: set SKODA_API_KEY"))
 	}
 	cfg.vin = strings.TrimSpace(cfg.vin)
 	if cfg.vin == "" {
@@ -123,7 +122,6 @@ func main() {
 func loadConfig() config {
 	return config{
 		apiKey:     env("SKODA_API_KEY", ""),
-		apiKeyFile: env("SKODA_API_KEY_FILE", ""),
 		vin:        env("SKODA_VIN", ""),
 		interval:   envDuration("SKODA_POLL_INTERVAL", 5*time.Minute),
 		include:    env("SKODA_INCLUDE", ""),
@@ -132,21 +130,6 @@ func loadConfig() config {
 		staleAfter: envDuration("SKODA_STALE_AFTER", time.Hour),
 		logLevel:   env("LOG_LEVEL", "info"),
 	}
-}
-
-func loadKey(cfg config) (string, error) {
-	if cfg.apiKeyFile != "" {
-		b, err := os.ReadFile(cfg.apiKeyFile)
-		if err != nil {
-			return "", err
-		}
-		cfg.apiKey = string(b)
-	}
-	key := strings.TrimSpace(cfg.apiKey)
-	if key == "" {
-		return "", errors.New("no API key: set SKODA_API_KEY_FILE or SKODA_API_KEY")
-	}
-	return key, nil
 }
 
 func splitList(s string) []string {
