@@ -28,7 +28,7 @@ func TestVehicleFull(t *testing.T) {
 		w.Header().Set("RateLimit-Remaining", "17")
 		w.Header().Set("RateLimit-Reset", "1800")
 		w.Header().Set("X-API-Key-Expires-At", "2027-01-01T00:00:00Z")
-		w.Write(body)
+		_, _ = w.Write(body)
 	}))
 	defer srv.Close()
 
@@ -76,7 +76,7 @@ func TestVehiclePartial(t *testing.T) {
 		if r.URL.RawQuery != "" {
 			t.Errorf("unexpected query %q", r.URL.RawQuery)
 		}
-		w.Write(body)
+		_, _ = w.Write(body)
 	}))
 	defer srv.Close()
 
@@ -131,7 +131,7 @@ func TestVehicleErrors(t *testing.T) {
 				}
 				w.Header().Set("Content-Type", "application/problem+json")
 				w.WriteHeader(tc.status)
-				w.Write([]byte(tc.body))
+				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer srv.Close()
 

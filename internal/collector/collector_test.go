@@ -60,7 +60,7 @@ func TestFullResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	if err := testutil.CollectAndCompare(c, f); err != nil {
 		t.Error(err)
 	}

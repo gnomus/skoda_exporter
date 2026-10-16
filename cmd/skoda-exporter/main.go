@@ -86,7 +86,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Write([]byte("ok\n"))
+		_, _ = w.Write([]byte("ok\n"))
 	})
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
@@ -94,7 +94,7 @@ func main() {
 			return
 		}
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<html><body><h1>Skoda exporter</h1><p><a href="/metrics">Metrics</a></p></body></html>`))
+		_, _ = w.Write([]byte(`<html><body><h1>Skoda exporter</h1><p><a href="/metrics">Metrics</a></p></body></html>`))
 	})
 	srv := &http.Server{Addr: cfg.listenAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
@@ -103,7 +103,9 @@ func main() {
 		<-ctx.Done()
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		srv.Shutdown(shutdown)
+		if err := srv.Shutdown(shutdown); err != nil {
+			logger.Error("shutdown", "err", err)
+		}
 	}()
 
 	logger.Info("starting", "listen", cfg.listenAddr, "vins", len(vins), "interval", cfg.interval, "base_url", cfg.baseURL)
@@ -124,7 +126,7 @@ func parseFlags(args []string) config {
 	fs.StringVar(&cfg.listenAddr, "listen-address", env("LISTEN_ADDR", ":9877"), "address for /metrics (env LISTEN_ADDR)")
 	fs.DurationVar(&cfg.staleAfter, "stale-after", envDuration("SKODA_STALE_AFTER", time.Hour), "drop vehicle metrics when the last success is older (env SKODA_STALE_AFTER)")
 	fs.StringVar(&cfg.logLevel, "log-level", env("LOG_LEVEL", "info"), "debug, info, warn or error (env LOG_LEVEL)")
-	fs.Parse(args)
+	_ = fs.Parse(args)
 	return cfg
 }
 

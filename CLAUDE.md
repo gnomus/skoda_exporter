@@ -14,7 +14,7 @@ go test ./internal/poller -run TestNextDelay   # single test
 SKODA_API_KEY_FILE=api-key.txt SKODA_VINS=TMB... go run ./cmd/skoda-exporter   # serves :9877/metrics
 ```
 
-Use `SKODA_BASE_URL=https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox. CI builds a multi-arch (amd64/arm64) image to ghcr.io on pushes to main and `v*` tags.
+Use `SKODA_BASE_URL=https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox. CI builds an amd64 image to ghcr.io on pushes to main and `v*` tags.
 
 ## Architecture
 
