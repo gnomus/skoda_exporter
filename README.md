@@ -50,19 +50,19 @@ Keep `replicas: 1`: each replica polls the API on its own.
 
 ## Configuration
 
-Every option is an environment variable and a flag.
+Configuration is read from environment variables only.
 
-| Env var | Flag | Default | Meaning |
-| --- | --- | --- | --- |
-| `SKODA_API_KEY_FILE` | `-api-key-file` | | File holding the API key (preferred) |
-| `SKODA_API_KEY` | `-api-key` | | API key, if no file is used |
-| `SKODA_VIN` | `-vin` | | VIN to poll (required) |
-| `SKODA_POLL_INTERVAL` | `-poll-interval` | `5m` | Time between calls; raised to `4m` if lower |
-| `SKODA_INCLUDE` | `-include` | all | Comma-separated response parts to request |
-| `SKODA_BASE_URL` | `-base-url` | production | Use `https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox |
-| `SKODA_STALE_AFTER` | `-stale-after` | `1h` | Drop vehicle metrics when data is older |
-| `LISTEN_ADDR` | `-listen-address` | `:9877` | Address for `/metrics` and `/healthz` |
-| `LOG_LEVEL` | `-log-level` | `info` | `debug` logs missing response parts |
+| Env var | Default | Meaning |
+| --- | --- | --- |
+| `SKODA_API_KEY_FILE` | | File holding the API key (preferred) |
+| `SKODA_API_KEY` | | API key, if no file is used |
+| `SKODA_VIN` | | VIN to poll (required) |
+| `SKODA_POLL_INTERVAL` | `5m` | Time between calls; raised to `4m` if lower |
+| `SKODA_INCLUDE` | all | Comma-separated response parts to request |
+| `SKODA_BASE_URL` | production | Use `https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox |
+| `SKODA_STALE_AFTER` | `1h` | Drop vehicle metrics when data is older |
+| `LISTEN_ADDR` | `:9877` | Address for `/metrics` and `/healthz` |
+| `LOG_LEVEL` | `info` | `debug` logs missing response parts |
 
 ## Behaviour
 

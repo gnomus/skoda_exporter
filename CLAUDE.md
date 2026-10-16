@@ -18,7 +18,7 @@ Use `SKODA_BASE_URL=https://public.test-api.connect.skoda-auto.cz/api/v1` for th
 
 ## Architecture
 
-Data flows `api` → `poller.Store` → `collector`, wired in `cmd/skoda-exporter/main.go` (flags with env-var defaults, HTTP server, signal shutdown).
+Data flows `api` → `poller.Store` → `collector`, wired in `cmd/skoda-exporter/main.go` (env-var config, HTTP server, signal shutdown).
 
 - **The API quota (20 calls/hour/VIN, failed calls count) drives the design.** Scrapes never call the API: `poller` runs a single VIN on a timer, stores the latest result in `Store`, and `collector` reads snapshots at scrape time. `poller.MinInterval` (4m) is enforced both in `main` and in `Poller.Run`.
 - **`internal/api`** — HTTP client and response types. `Vehicle` returns the response plus `Meta` (status code, `RateLimit-*`, `Retry-After`, `X-API-Key-Expires-At`) even on errors; non-2xx becomes `*StatusError`, checked with `api.IsStatus`. All response fields are pointers because the API omits parts it can't deliver (listed in `errors`).
