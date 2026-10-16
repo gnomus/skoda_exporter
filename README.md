@@ -57,7 +57,7 @@ Every option is an environment variable and a flag.
 | `SKODA_API_KEY_FILE` | `-api-key-file` | | File holding the API key (preferred) |
 | `SKODA_API_KEY` | `-api-key` | | API key, if no file is used |
 | `SKODA_VIN` | `-vin` | | VIN to poll (required) |
-| `SKODA_POLL_INTERVAL` | `-poll-interval` | `5m` | Time between calls per VIN; raised to `4m` if lower |
+| `SKODA_POLL_INTERVAL` | `-poll-interval` | `5m` | Time between calls; raised to `4m` if lower |
 | `SKODA_INCLUDE` | `-include` | all | Comma-separated response parts to request |
 | `SKODA_BASE_URL` | `-base-url` | production | Use `https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox |
 | `SKODA_STALE_AFTER` | `-stale-after` | `1h` | Drop vehicle metrics when data is older |
