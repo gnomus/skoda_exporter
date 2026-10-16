@@ -109,14 +109,12 @@ func (p *Poller) Run(ctx context.Context) {
 	if p.Interval < MinInterval {
 		p.Interval = MinInterval
 	}
-	var delay time.Duration
-	for {
+	for ctx.Err() == nil {
+		delay := p.PollOnce(ctx)
 		select {
 		case <-ctx.Done():
-			return
 		case <-time.After(delay):
 		}
-		delay = p.PollOnce(ctx)
 	}
 }
 
