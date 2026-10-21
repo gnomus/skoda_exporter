@@ -49,7 +49,7 @@ type stubFetcher struct {
 	err  error
 }
 
-func (s stubFetcher) Vehicle(context.Context, string, string) (*api.VehicleResponse, api.Meta, error) {
+func (s stubFetcher) Vehicle(context.Context, string, []string) (*api.VehicleResponse, api.Meta, error) {
 	if s.err != nil {
 		return nil, s.meta, s.err
 	}

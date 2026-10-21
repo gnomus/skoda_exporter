@@ -80,10 +80,10 @@ func IsStatus(err error, code int) bool {
 // Vehicle fetches one vehicle. include limits the response to the named
 // parts; empty means all parts. Meta is filled whenever a response arrived,
 // even if err is non-nil.
-func (c *Client) Vehicle(ctx context.Context, vin string, include string) (*VehicleResponse, Meta, error) {
+func (c *Client) Vehicle(ctx context.Context, vin string, include []string) (*VehicleResponse, Meta, error) {
 	u := c.baseURL + "/vehicles/" + url.PathEscape(vin)
-	if include != "" {
-		u += "?include=" + url.QueryEscape(include)
+	if len(include) > 0 {
+		u += "?include=" + url.QueryEscape(strings.Join(include, ","))
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)

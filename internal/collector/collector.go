@@ -27,6 +27,14 @@ var (
 	windowStates = []string{"ON", "OFF", "UNKNOWN", "UNSUPPORTED"}
 )
 
+// Scale factors for scaledGauge, converting API units to Prometheus base units.
+const (
+	kmToMeters       = 1000
+	kWToWatts        = 1000
+	percentToRatio   = 0.01
+	minutesToSeconds = 60
+)
+
 func desc(name, help string, labels ...string) *prometheus.Desc {
 	return prometheus.NewDesc("skoda_"+name, help, append([]string{"vin"}, labels...), nil)
 }
@@ -69,16 +77,18 @@ var (
 	descLastSuccess = desc("last_success_timestamp_seconds", "Unix time of the last successful API call.")
 	descPartErrors  = desc("api_part_errors", "Parts missing from the last successful response; 1 per error type.", "type")
 	descRateLimit   = desc("api_ratelimit_remaining", "Remaining API calls in the current window, from RateLimit-Remaining.")
-	descKeyExpiry   = prometheus.NewDesc("skoda_api_key_expiry_timestamp_seconds", "Unix time when the API key expires, from X-API-Key-Expires-At.", nil, nil)
+	// The key belongs to the account, not a VIN, so this has no vin label.
+	descKeyExpiry = prometheus.NewDesc("skoda_api_key_expiry_timestamp_seconds", "Unix time when the API key expires, from X-API-Key-Expires-At.", nil, nil)
 )
 
 // Collector implements prometheus.Collector over a poller.Store. It is an
 // unchecked collector: series come and go with the data.
 type Collector struct {
 	Store *poller.Store
-	// StaleAfter drops vehicle metrics when the last success is older.
+	// StaleAfter drops vehicle metrics when the last success is older; 0
+	// disables this.
 	StaleAfter time.Duration
-
+	// Now is the clock; nil means time.Now.
 	Now func() time.Time
 }
 
@@ -122,42 +132,30 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	}
 
 	if v.Odometer != nil {
-		opt(ch, descOdometer, vin, v.Odometer.MileageInKm, 1000)
+		scaledGauge(ch, descOdometer, vin, v.Odometer.MileageInKm, kmToMeters)
 	}
 	if ac := v.AirConditioning; ac != nil {
-		if ac.State != nil {
-			enum(ch, descAirConditioner, vin, *ac.State, acStates)
-		}
-		temp(ch, descACTemp, vin, ac.TargetTemperature)
-		ts(ch, descACReach, vin, ac.EstimatedReachOfTargetTemperatureAt)
-		bit(ch, descACNoPower, vin, ac.AirConditioningWithoutExternalPower)
-		bit(ch, descACAtUnlock, vin, ac.AirConditioningAtUnlock)
+		enumGauge(ch, descAirConditioner, vin, ac.State, acStates)
+		tempGauge(ch, descACTemp, vin, ac.TargetTemperature)
+		timestampGauge(ch, descACReach, vin, ac.EstimatedReachOfTargetTemperatureAt)
+		boolGauge(ch, descACNoPower, vin, ac.AirConditioningWithoutExternalPower)
+		boolGauge(ch, descACAtUnlock, vin, ac.AirConditioningAtUnlock)
 		if w := ac.WindowHeating; w != nil {
-			bit(ch, descWindowEnabled, vin, w.Enabled)
-			if w.Front != nil {
-				enum(ch, descWindowFront, vin, *w.Front, windowStates)
-			}
-			if w.Rear != nil {
-				enum(ch, descWindowRear, vin, *w.Rear, windowStates)
-			}
+			boolGauge(ch, descWindowEnabled, vin, w.Enabled)
+			enumGauge(ch, descWindowFront, vin, w.Front, windowStates)
+			enumGauge(ch, descWindowRear, vin, w.Rear, windowStates)
 		}
 	}
 	if a := v.AuxiliaryHeating; a != nil {
-		if a.State != nil {
-			enum(ch, descAuxState, vin, *a.State, auxStates)
-		}
-		if a.StartMode != nil {
-			enum(ch, descAuxMode, vin, *a.StartMode, auxModes)
-		}
-		opt(ch, descAuxDuration, vin, a.DurationInSeconds, 1)
-		temp(ch, descAuxTemp, vin, a.TargetTemperature)
-		ts(ch, descAuxReach, vin, a.EstimatedReachOfTargetTemperatureAt)
+		enumGauge(ch, descAuxState, vin, a.State, auxStates)
+		enumGauge(ch, descAuxMode, vin, a.StartMode, auxModes)
+		scaledGauge(ch, descAuxDuration, vin, a.DurationInSeconds, 1)
+		tempGauge(ch, descAuxTemp, vin, a.TargetTemperature)
+		timestampGauge(ch, descAuxReach, vin, a.EstimatedReachOfTargetTemperatureAt)
 	}
 	if a := v.ActiveVentilation; a != nil {
-		if a.State != nil {
-			enum(ch, descVentState, vin, *a.State, ventStates)
-		}
-		opt(ch, descVentDuration, vin, a.DurationInSeconds, 1)
+		enumGauge(ch, descVentState, vin, a.State, ventStates)
+		scaledGauge(ch, descVentDuration, vin, a.DurationInSeconds, 1)
 	}
 	if v.Status != nil && v.Status.Overall != nil {
 		if d := v.Status.Overall.DoorsLocked; d != nil {
@@ -171,28 +169,22 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	if chg == nil {
 		return
 	}
-	if chg.IsVehicleInSavedLocation != nil {
-		ch <- gauge(descSavedLocation, b2f(*chg.IsVehicleInSavedLocation), vin)
-	}
+	boolGauge(ch, descSavedLocation, vin, chg.IsVehicleInSavedLocation)
 	if st := chg.Settings; st != nil {
-		opt(ch, descTargetSoc, vin, st.TargetStateOfChargeInPercent, 0.01)
-		opt(ch, descMaxCurrent, vin, st.MaxChargeCurrentAcAmpere, 1)
+		scaledGauge(ch, descTargetSoc, vin, st.TargetStateOfChargeInPercent, percentToRatio)
+		scaledGauge(ch, descMaxCurrent, vin, st.MaxChargeCurrentAcAmpere, 1)
 	}
 
 	st := chg.Status
 	if st == nil {
 		return
 	}
-	opt(ch, descPower, vin, st.ChargePowerInKw, 1000)
-	opt(ch, descRate, vin, st.ChargingRateInKilometersPerHour, 1000)
-	opt(ch, descRemaining, vin, st.RemainingTimeToFullyChargedInMinutes, 60)
-	ts(ch, descFullyAt, vin, st.FullyChargedAt)
-	if st.State != nil {
-		enum(ch, descState, vin, *st.State, chargingStates)
-	}
-	if st.ChargeType != nil {
-		enum(ch, descType, vin, *st.ChargeType, chargeTypes)
-	}
+	scaledGauge(ch, descPower, vin, st.ChargePowerInKw, kWToWatts)
+	scaledGauge(ch, descRate, vin, st.ChargingRateInKilometersPerHour, kmToMeters)
+	scaledGauge(ch, descRemaining, vin, st.RemainingTimeToFullyChargedInMinutes, minutesToSeconds)
+	timestampGauge(ch, descFullyAt, vin, st.FullyChargedAt)
+	enumGauge(ch, descState, vin, st.State, chargingStates)
+	enumGauge(ch, descType, vin, st.ChargeType, chargeTypes)
 	if st.PlugConnectionState != nil {
 		switch *st.PlugConnectionState {
 		case "CONNECTED":
@@ -210,8 +202,8 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		}
 	}
 	if b := st.Battery; b != nil {
-		opt(ch, descSoc, vin, b.StateOfChargeInPercent, 0.01)
-		opt(ch, descRange, vin, b.RemainingCruisingRangeInMeters, 1)
+		scaledGauge(ch, descSoc, vin, b.StateOfChargeInPercent, percentToRatio)
+		scaledGauge(ch, descRange, vin, b.RemainingCruisingRangeInMeters, 1)
 	}
 }
 
@@ -226,17 +218,22 @@ func parseLocked(s string) (locked, ok bool) {
 	return false, false
 }
 
-func enum(ch chan<- prometheus.Metric, d *prometheus.Desc, vin, current string, known []string) {
-	for _, k := range known {
-		ch <- gauge(d, b2f(k == current), vin, k)
+// enumGauge emits one 0/1 series per known value, plus the current value if it is
+// not a known one. A nil current emits nothing.
+func enumGauge(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, current *string, known []string) {
+	if current == nil {
+		return
 	}
-	if !slices.Contains(known, current) {
-		ch <- gauge(d, 1, vin, current)
+	for _, k := range known {
+		ch <- gauge(d, b2f(k == *current), vin, k)
+	}
+	if !slices.Contains(known, *current) {
+		ch <- gauge(d, 1, vin, *current)
 	}
 }
 
-// ts emits an RFC 3339 timestamp as Unix seconds; unparsable values are dropped.
-func ts(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, s *string) {
+// timestampGauge emits an RFC 3339 timestamp as Unix seconds; unparsable values are dropped.
+func timestampGauge(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, s *string) {
 	if s == nil {
 		return
 	}
@@ -250,14 +247,15 @@ func ts(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, s *string) 
 	}
 }
 
-func bit(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, b *bool) {
+// boolGauge emits a bool as 0 or 1; nil emits nothing.
+func boolGauge(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, b *bool) {
 	if b != nil {
 		ch <- gauge(d, b2f(*b), vin)
 	}
 }
 
-// temp emits a temperature in Celsius; an unknown unit emits nothing.
-func temp(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, t *api.Temperature) {
+// tempGauge emits a temperature in Celsius; an unknown unit emits nothing.
+func tempGauge(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, t *api.Temperature) {
 	if t == nil || t.Value == nil || t.Unit == nil {
 		return
 	}
@@ -269,7 +267,8 @@ func temp(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, t *api.Te
 	}
 }
 
-func opt(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, v *float64, scale float64) {
+// scaledGauge emits *v multiplied by scale; nil emits nothing.
+func scaledGauge(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, v *float64, scale float64) {
 	if v != nil {
 		ch <- gauge(d, *v*scale, vin)
 	}

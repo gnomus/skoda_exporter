@@ -24,10 +24,11 @@ import (
 )
 
 func main() {
+	// Trimmed because pasted values often carry a trailing newline.
 	apiKey := strings.TrimSpace(os.Getenv("SKODA_API_KEY"))
 	vin := strings.TrimSpace(os.Getenv("SKODA_VIN"))
 	interval := envDuration("SKODA_POLL_INTERVAL", 5*time.Minute)
-	include := strings.TrimSpace(os.Getenv("SKODA_INCLUDE"))
+	include := splitList(os.Getenv("SKODA_INCLUDE"))
 	baseURL := env("SKODA_BASE_URL", api.ProductionURL)
 	listenAddr := env("LISTEN_ADDR", ":9877")
 	staleAfter := envDuration("SKODA_STALE_AFTER", time.Hour)
@@ -92,9 +93,9 @@ func main() {
 		defer close(done)
 		<-ctx.Done()
 		stop() // restore default signal handling so a second signal kills the process during the drain
-		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := srv.Shutdown(shutdown); err != nil {
+		if err := srv.Shutdown(shutdownCtx); err != nil {
 			slog.Error("shutdown", "err", err)
 		}
 	}()
@@ -105,6 +106,17 @@ func main() {
 	}
 	// Serve returns as soon as Shutdown starts; wait for in-flight requests to drain.
 	<-done
+}
+
+// splitList splits a comma-separated list, trimming parts and dropping empty ones.
+func splitList(s string) []string {
+	var out []string
+	for _, part := range strings.Split(s, ",") {
+		if part = strings.TrimSpace(part); part != "" {
+			out = append(out, part)
+		}
+	}
+	return out
 }
 
 func env(name, def string) string {
@@ -119,11 +131,11 @@ func envDuration(name string, def time.Duration) time.Duration {
 	if !ok {
 		return def
 	}
-	if d, err := time.ParseDuration(v); err == nil {
-		return d
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		fatal("configuration", fmt.Errorf("%s: invalid duration %q (use e.g. 5m, 1h)", name, v))
 	}
-	fatal("configuration", fmt.Errorf("%s: invalid duration %q", name, v))
-	return 0
+	return d
 }
 
 func fatal(msg string, err error) {

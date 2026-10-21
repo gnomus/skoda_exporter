@@ -29,7 +29,7 @@ Configuration is read from environment variables only.
 | `SKODA_API_KEY` | | API key (required) |
 | `SKODA_VIN` | | VIN to poll (required) |
 | `SKODA_POLL_INTERVAL` | `5m` | Time between calls as a Go duration (`5m`, not `300`); raised to `4m` if lower |
-| `SKODA_INCLUDE` | all | Comma-separated response parts to request, no spaces, e.g. `charging,odometer` |
+| `SKODA_INCLUDE` | all | Comma-separated response parts to request, e.g. `charging,odometer` |
 | `SKODA_BASE_URL` | production | Use `https://public.test-api.connect.skoda-auto.cz/api/v1` for the sandbox |
 | `SKODA_STALE_AFTER` | `1h` | Go duration (`1h`, not `3600`); drop vehicle metrics when data is older |
 | `LISTEN_ADDR` | `:9877` | Address for `/metrics` and `/healthz` |

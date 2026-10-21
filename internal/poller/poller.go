@@ -25,7 +25,7 @@ const authBackoff = time.Hour
 
 // Fetcher is the part of api.Client the poller needs.
 type Fetcher interface {
-	Vehicle(ctx context.Context, vin string, include string) (*api.VehicleResponse, api.Meta, error)
+	Vehicle(ctx context.Context, vin string, include []string) (*api.VehicleResponse, api.Meta, error)
 }
 
 // Snapshot is what the collector reads.
@@ -79,7 +79,7 @@ type Poller struct {
 	Fetcher  Fetcher
 	Store    *Store
 	VIN      string
-	Include  string
+	Include  []string
 	Interval time.Duration
 	// Requests counts API calls by VIN and HTTP status ("error" if none).
 	Requests *prometheus.CounterVec
@@ -119,6 +119,7 @@ func (p *Poller) PollOnce(ctx context.Context) time.Duration {
 
 	res, meta, err := p.Fetcher.Vehicle(ctx, p.VIN, p.Include)
 	if ctx.Err() != nil {
+		// Shutting down: don't count or record a cancelled call.
 		return 0
 	}
 
@@ -145,6 +146,12 @@ func (p *Poller) PollOnce(ctx context.Context) time.Duration {
 	return nextDelay(p.Interval, meta, err)
 }
 
+// nextDelay returns how long to wait before the next call. Rules, in the
+// order they are applied:
+//  1. 401 or 403: wait at least authBackoff.
+//  2. 429: wait at least Retry-After and RateLimit-Reset.
+//  3. No quota left (even after a success): wait at least RateLimit-Reset.
+//  4. Never wait longer than maxDelay.
 func nextDelay(interval time.Duration, meta api.Meta, err error) time.Duration {
 	d := interval
 	switch {
@@ -153,10 +160,10 @@ func nextDelay(interval time.Duration, meta api.Meta, err error) time.Duration {
 	case api.IsStatus(err, http.StatusTooManyRequests):
 		d = max(d, meta.RetryAfter, meta.RateLimitReset)
 	}
-	// Quota used up, even on a success: wait for the window to reset.
 	if meta.RateLimitRemaining != nil && *meta.RateLimitRemaining <= 0 {
 		d = max(d, meta.RateLimitReset)
 	}
 	// Cap so a bogus header (epoch seconds, far-future date) cannot stop polling.
-	return min(d, max(interval, authBackoff))
+	maxDelay := max(interval, authBackoff)
+	return min(d, maxDelay)
 }

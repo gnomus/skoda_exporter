@@ -34,7 +34,7 @@ func TestVehicleFull(t *testing.T) {
 	defer srv.Close()
 
 	c := New(srv.URL+"/api/v1", "secret")
-	res, meta, err := c.Vehicle(context.Background(), "TMBJB9NY5RF999999", "charging,odometer")
+	res, meta, err := c.Vehicle(context.Background(), "TMBJB9NY5RF999999", []string{"charging", "odometer"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestVehicleDoesNotFollowRedirects(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := New(srv.URL, "secret").Vehicle(context.Background(), "V1", "")
+	_, _, err := New(srv.URL, "secret").Vehicle(context.Background(), "V1", nil)
 	if !IsStatus(err, http.StatusFound) {
 		t.Errorf("err = %v, want 302 StatusError", err)
 	}
@@ -92,7 +92,7 @@ func TestVehiclePartial(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	res, _, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", "")
+	res, _, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -120,9 +120,10 @@ func TestVehicleErrors(t *testing.T) {
 			wantType: "https://public.api.connect.skoda-auto.cz/problems/api-key-expired",
 		},
 		{
-			name:   "not authorized",
-			status: 403,
-			body:   `{"type":"api-key-not-authorized"}`, wantType: "api-key-not-authorized",
+			name:     "not authorized",
+			status:   403,
+			body:     `{"type":"api-key-not-authorized"}`,
+			wantType: "api-key-not-authorized",
 		},
 		{
 			name:       "rate limited",
@@ -146,7 +147,7 @@ func TestVehicleErrors(t *testing.T) {
 			}))
 			defer srv.Close()
 
-			_, meta, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", "")
+			_, meta, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", nil)
 			if !IsStatus(err, tc.status) {
 				t.Fatalf("err = %v, want status %d", err, tc.status)
 			}

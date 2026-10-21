@@ -24,9 +24,9 @@ func TestTimestampFormats(t *testing.T) {
 		"garbage":              0,
 	} {
 		ch := make(chan prometheus.Metric, 1)
-		ts(ch, descACReach, vin, &in)
+		timestampGauge(ch, descACReach, vin, &in)
 		if got := len(ch); got != want {
-			t.Errorf("ts(%q) emitted %d, want %d", in, got, want)
+			t.Errorf("timestampGauge(%q) emitted %d, want %d", in, got, want)
 		}
 	}
 }
@@ -46,7 +46,7 @@ func TestTemp(t *testing.T) {
 		"nil value":  {&api.Temperature{Unit: &cel}, nil},
 	} {
 		ch := make(chan prometheus.Metric, 1)
-		temp(ch, descACTemp, vin, tc.in)
+		tempGauge(ch, descACTemp, vin, tc.in)
 		close(ch)
 		var got []float64
 		for m := range ch {
@@ -70,7 +70,7 @@ type fakeFetcher struct {
 	err  error
 }
 
-func (f *fakeFetcher) Vehicle(context.Context, string, string) (*api.VehicleResponse, api.Meta, error) {
+func (f *fakeFetcher) Vehicle(context.Context, string, []string) (*api.VehicleResponse, api.Meta, error) {
 	return f.res, f.meta, f.err
 }
 
@@ -114,6 +114,8 @@ func TestFullResponse(t *testing.T) {
 	}
 }
 
+// partial.json has charging unavailable and no climate sections, so only the
+// health, info, part error and odometer series may appear.
 func TestPartialResponse(t *testing.T) {
 	_, c := setup(&fakeFetcher{res: load(t, "partial.json"), meta: api.Meta{StatusCode: 200}})
 
@@ -160,7 +162,7 @@ skoda_up{vin="TMBJB9NY5RF999999"} 0
 	}
 
 	// Past StaleAfter the vehicle data is dropped, health stays.
-	c.Now = func() time.Time { return t0.Add(61 * time.Minute) }
+	c.Now = func() time.Time { return t0.Add(c.StaleAfter + time.Minute) }
 	if n := testutil.CollectAndCount(c, "skoda_battery_soc_ratio"); n != 0 {
 		t.Errorf("soc series = %d, want 0 when stale", n)
 	}
@@ -206,10 +208,11 @@ func TestDoorsLockedAbsentEmitsNoSeries(t *testing.T) {
 	}
 }
 
-func TestDuplicateErrorTypesGather(t *testing.T) {
+func TestDuplicateErrorTypesEmitOnce(t *testing.T) {
 	res := load(t, "full.json")
 	res.Errors = []api.PartError{{Type: "CHARGING_UNAVAILABLE"}, {Type: "CHARGING_UNAVAILABLE"}}
 	_, c := setup(&fakeFetcher{res: res, meta: api.Meta{StatusCode: 200}})
+	// CollectAndCount panics on duplicate series (pedantic registry).
 	if n := testutil.CollectAndCount(c, "skoda_api_part_errors"); n != 1 {
 		t.Errorf("part_errors series = %d, want 1", n)
 	}
