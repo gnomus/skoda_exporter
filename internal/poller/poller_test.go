@@ -82,8 +82,8 @@ func TestPollOnceCountsAndRecords(t *testing.T) {
 	if snap.Response == nil || snap.LastSuccess.IsZero() {
 		t.Error("last successful response should be kept")
 	}
-	if !store.KeyExpiresAt().Equal(expiry) {
-		t.Errorf("KeyExpiresAt = %v", store.KeyExpiresAt())
+	if !snap.KeyExpiresAt.Equal(expiry) {
+		t.Errorf("KeyExpiresAt = %v", snap.KeyExpiresAt)
 	}
 }
 

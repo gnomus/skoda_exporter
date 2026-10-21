@@ -105,8 +105,6 @@ type ChargingSettings struct {
 
 // Problem is an RFC 9457 problem+json error body.
 type Problem struct {
-	Type   string `json:"type"`
-	Title  string `json:"title"`
-	Status int    `json:"status"`
-	Detail string `json:"detail"`
+	Type  string `json:"type"`
+	Title string `json:"title"`
 }

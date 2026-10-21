@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -24,58 +23,51 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-type config struct {
-	apiKey     string
-	vin        string
-	interval   time.Duration
-	include    string
-	baseURL    string
-	listenAddr string
-	staleAfter time.Duration
-	logLevel   string
-}
-
 func main() {
-	cfg := loadConfig()
+	// Trimmed because pasted values often carry a trailing newline.
+	apiKey := strings.TrimSpace(os.Getenv("SKODA_API_KEY"))
+	vin := strings.TrimSpace(os.Getenv("SKODA_VIN"))
+	interval := envDuration("SKODA_POLL_INTERVAL", 5*time.Minute)
+	include := splitList(os.Getenv("SKODA_INCLUDE"))
+	baseURL := env("SKODA_BASE_URL", api.ProductionURL)
+	listenAddr := env("LISTEN_ADDR", ":9877")
+	staleAfter := envDuration("SKODA_STALE_AFTER", time.Hour)
+	logLevel := env("LOG_LEVEL", "info")
 
 	var level slog.Level
-	if err := level.UnmarshalText([]byte(cfg.logLevel)); err != nil {
+	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
 		fatal("invalid log level", err)
 	}
-	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level}))
-	slog.SetDefault(logger)
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: level})))
 
-	key := strings.TrimSpace(cfg.apiKey)
-	if key == "" {
+	if apiKey == "" {
 		fatal("configuration", errors.New("no API key: set SKODA_API_KEY"))
 	}
-	cfg.vin = strings.TrimSpace(cfg.vin)
-	if cfg.vin == "" {
+	if vin == "" {
 		fatal("configuration", errors.New("no VIN: set SKODA_VIN"))
 	}
-	if cfg.interval < poller.MinInterval {
-		logger.Warn("poll interval raised to stay under the API rate limit", "requested", cfg.interval, "used", poller.MinInterval)
-		cfg.interval = poller.MinInterval
+	if interval < poller.MinInterval {
+		slog.Warn("poll interval raised to stay under the API rate limit", "requested", interval, "used", poller.MinInterval)
+		interval = poller.MinInterval
 	}
 
-	store := poller.NewStore(cfg.vin)
+	store := poller.NewStore(vin)
 	requests := poller.NewRequestsCounter()
 
 	reg := prometheus.NewRegistry()
 	reg.MustRegister(
-		&collector.Collector{Store: store, StaleAfter: cfg.staleAfter},
+		&collector.Collector{Store: store, StaleAfter: staleAfter},
 		requests,
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
 
 	p := &poller.Poller{
-		Fetcher:  api.New(cfg.baseURL, key, nil),
+		Fetcher:  api.New(baseURL, apiKey),
 		Store:    store,
-		VIN:      cfg.vin,
-		Include:  splitList(cfg.include),
-		Interval: cfg.interval,
-		Logger:   logger,
+		VIN:      vin,
+		Include:  include,
+		Interval: interval,
 		Requests: requests,
 	}
 
@@ -87,18 +79,10 @@ func main() {
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok\n"))
 	})
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/" {
-			http.NotFound(w, r)
-			return
-		}
-		w.Header().Set("Content-Type", "text/html")
-		_, _ = w.Write([]byte(`<html><body><h1>Skoda exporter</h1><p><a href="/metrics">Metrics</a></p></body></html>`))
-	})
-	srv := &http.Server{Addr: cfg.listenAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
+	srv := &http.Server{Addr: listenAddr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 
 	// Bind before polling so a port clash does not waste API quota.
-	ln, err := net.Listen("tcp", cfg.listenAddr)
+	ln, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		fatal("listen", err)
 	}
@@ -109,14 +93,14 @@ func main() {
 		defer close(done)
 		<-ctx.Done()
 		stop() // restore default signal handling so a second signal kills the process during the drain
-		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		if err := srv.Shutdown(shutdown); err != nil {
-			logger.Error("shutdown", "err", err)
+		if err := srv.Shutdown(shutdownCtx); err != nil {
+			slog.Error("shutdown", "err", err)
 		}
 	}()
 
-	logger.Info("starting", "listen", cfg.listenAddr, "vin", cfg.vin, "interval", cfg.interval, "base_url", cfg.baseURL)
+	slog.Info("starting", "listen", listenAddr, "vin", vin, "interval", interval, "base_url", baseURL)
 	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal("http server", err)
 	}
@@ -124,19 +108,7 @@ func main() {
 	<-done
 }
 
-func loadConfig() config {
-	return config{
-		apiKey:     env("SKODA_API_KEY", ""),
-		vin:        env("SKODA_VIN", ""),
-		interval:   envDuration("SKODA_POLL_INTERVAL", 5*time.Minute),
-		include:    env("SKODA_INCLUDE", ""),
-		baseURL:    env("SKODA_BASE_URL", api.ProductionURL),
-		listenAddr: env("LISTEN_ADDR", ":9877"),
-		staleAfter: envDuration("SKODA_STALE_AFTER", time.Hour),
-		logLevel:   env("LOG_LEVEL", "info"),
-	}
-}
-
+// splitList splits a comma-separated list, trimming parts and dropping empty ones.
 func splitList(s string) []string {
 	var out []string
 	for _, part := range strings.Split(s, ",") {
@@ -159,15 +131,11 @@ func envDuration(name string, def time.Duration) time.Duration {
 	if !ok {
 		return def
 	}
-	if d, err := time.ParseDuration(v); err == nil {
-		return d
+	d, err := time.ParseDuration(v)
+	if err != nil {
+		fatal("configuration", fmt.Errorf("%s: invalid duration %q (use e.g. 5m, 1h)", name, v))
 	}
-	// Bare numbers are seconds.
-	if n, err := strconv.Atoi(v); err == nil {
-		return time.Duration(n) * time.Second
-	}
-	fatal("configuration", fmt.Errorf("%s: invalid duration %q", name, v))
-	return 0
+	return d
 }
 
 func fatal(msg string, err error) {
