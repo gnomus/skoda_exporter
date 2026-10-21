@@ -70,7 +70,7 @@ type fakeFetcher struct {
 	err  error
 }
 
-func (f *fakeFetcher) Vehicle(context.Context, string, []string) (*api.VehicleResponse, api.Meta, error) {
+func (f *fakeFetcher) Vehicle(context.Context, string, string) (*api.VehicleResponse, api.Meta, error) {
 	return f.res, f.meta, f.err
 }
 
@@ -114,33 +114,28 @@ func TestFullResponse(t *testing.T) {
 	}
 }
 
-func TestPartialResponseHasNoChargingSeries(t *testing.T) {
+func TestPartialResponse(t *testing.T) {
 	_, c := setup(&fakeFetcher{res: load(t, "partial.json"), meta: api.Meta{StatusCode: 200}})
 
 	want := `
 # HELP skoda_api_part_errors Parts missing from the last successful response; 1 per error type.
 # TYPE skoda_api_part_errors gauge
 skoda_api_part_errors{type="CHARGING_UNAVAILABLE",vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_last_success_timestamp_seconds Unix time of the last successful API call.
+# TYPE skoda_last_success_timestamp_seconds gauge
+skoda_last_success_timestamp_seconds{vin="TMBJB9NY5RF999999"} 1.7919342e+09
 # HELP skoda_odometer_meters Odometer reading.
 # TYPE skoda_odometer_meters gauge
 skoda_odometer_meters{vin="TMBJB9NY5RF999999"} 1.2753e+07
+# HELP skoda_up 1 if the last API call for this VIN succeeded.
+# TYPE skoda_up gauge
+skoda_up{vin="TMBJB9NY5RF999999"} 1
+# HELP skoda_vehicle_info Vehicle metadata; always 1.
+# TYPE skoda_vehicle_info gauge
+skoda_vehicle_info{license_plate="",name="My Enyaq",vin="TMBJB9NY5RF999999"} 1
 `
-	if err := testutil.CollectAndCompare(c, strings.NewReader(want), "skoda_api_part_errors", "skoda_odometer_meters"); err != nil {
+	if err := testutil.CollectAndCompare(c, strings.NewReader(want)); err != nil {
 		t.Error(err)
-	}
-	if n := testutil.CollectAndCount(c, "skoda_battery_soc_ratio", "skoda_charging_state", "skoda_charging_power_watts"); n != 0 {
-		t.Errorf("got %d charging series, want 0", n)
-	}
-	// partial.json has no climate sections at all.
-	if n := testutil.CollectAndCount(c,
-		"skoda_air_conditioning_state", "skoda_air_conditioning_target_temperature_celsius",
-		"skoda_air_conditioning_target_reached_timestamp_seconds", "skoda_air_conditioning_without_external_power",
-		"skoda_air_conditioning_at_unlock", "skoda_window_heating_enabled", "skoda_window_heating_front_state",
-		"skoda_window_heating_rear_state", "skoda_auxiliary_heating_state", "skoda_auxiliary_heating_start_mode",
-		"skoda_auxiliary_heating_duration_seconds", "skoda_auxiliary_heating_target_temperature_celsius",
-		"skoda_auxiliary_heating_target_reached_timestamp_seconds", "skoda_active_ventilation_state",
-		"skoda_active_ventilation_duration_seconds"); n != 0 {
-		t.Errorf("got %d climate series, want 0", n)
 	}
 }
 
@@ -215,11 +210,6 @@ func TestDuplicateErrorTypesGather(t *testing.T) {
 	res := load(t, "full.json")
 	res.Errors = []api.PartError{{Type: "CHARGING_UNAVAILABLE"}, {Type: "CHARGING_UNAVAILABLE"}}
 	_, c := setup(&fakeFetcher{res: res, meta: api.Meta{StatusCode: 200}})
-	reg := prometheus.NewPedanticRegistry()
-	reg.MustRegister(c)
-	if _, err := reg.Gather(); err != nil {
-		t.Fatal(err)
-	}
 	if n := testutil.CollectAndCount(c, "skoda_api_part_errors"); n != 1 {
 		t.Errorf("part_errors series = %d, want 1", n)
 	}

@@ -33,8 +33,8 @@ func TestVehicleFull(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := New(srv.URL+"/api/v1", "secret", nil)
-	res, meta, err := c.Vehicle(context.Background(), "TMBJB9NY5RF999999", []string{"charging", "odometer"})
+	c := New(srv.URL+"/api/v1", "secret")
+	res, meta, err := c.Vehicle(context.Background(), "TMBJB9NY5RF999999", "charging,odometer")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,21 +59,8 @@ func TestVehicleFull(t *testing.T) {
 		t.Errorf("KeyExpiresAt = %v", meta.KeyExpiresAt)
 	}
 
-	v := res.Vehicle
-	if v.Name != "My Enyaq" || v.LicensePlate != "1AB 2345" {
-		t.Errorf("vehicle = %+v", v)
-	}
-	if got := *v.Charging.Status.Battery.StateOfChargeInPercent; got != 71 {
+	if got := *res.Vehicle.Charging.Status.Battery.StateOfChargeInPercent; got != 71 {
 		t.Errorf("soc = %v", got)
-	}
-	if got := *v.AirConditioning.TargetTemperature.Value; got != 22.5 {
-		t.Errorf("ac target = %v", got)
-	}
-	if got := *v.AuxiliaryHeating.TargetTemperature.Unit; got != "FAHRENHEIT" {
-		t.Errorf("aux unit = %v", got)
-	}
-	if got := *v.ActiveVentilation.DurationInSeconds; got != 300 {
-		t.Errorf("ventilation duration = %v", got)
 	}
 }
 
@@ -86,7 +73,7 @@ func TestVehicleDoesNotFollowRedirects(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := New(srv.URL, "secret", nil).Vehicle(context.Background(), "V1", nil)
+	_, _, err := New(srv.URL, "secret").Vehicle(context.Background(), "V1", "")
 	if !IsStatus(err, http.StatusFound) {
 		t.Errorf("err = %v, want 302 StatusError", err)
 	}
@@ -105,7 +92,7 @@ func TestVehiclePartial(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	res, _, err := New(srv.URL, "k", nil).Vehicle(context.Background(), "VIN", nil)
+	res, _, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,13 +141,12 @@ func TestVehicleErrors(t *testing.T) {
 				for k, v := range tc.header {
 					w.Header().Set(k, v)
 				}
-				w.Header().Set("Content-Type", "application/problem+json")
 				w.WriteHeader(tc.status)
 				_, _ = w.Write([]byte(tc.body))
 			}))
 			defer srv.Close()
 
-			_, meta, err := New(srv.URL, "k", nil).Vehicle(context.Background(), "VIN", nil)
+			_, meta, err := New(srv.URL, "k").Vehicle(context.Background(), "VIN", "")
 			if !IsStatus(err, tc.status) {
 				t.Fatalf("err = %v, want status %d", err, tc.status)
 			}

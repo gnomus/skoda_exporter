@@ -25,7 +25,7 @@ const authBackoff = time.Hour
 
 // Fetcher is the part of api.Client the poller needs.
 type Fetcher interface {
-	Vehicle(ctx context.Context, vin string, include []string) (*api.VehicleResponse, api.Meta, error)
+	Vehicle(ctx context.Context, vin string, include string) (*api.VehicleResponse, api.Meta, error)
 }
 
 // Snapshot is what the collector reads.
@@ -37,13 +37,14 @@ type Snapshot struct {
 	// Up is true if the most recent call succeeded.
 	Up                 bool
 	RateLimitRemaining *int
+	// KeyExpiresAt is the zero time if never seen.
+	KeyExpiresAt time.Time
 }
 
 // Store holds the latest state of the vehicle.
 type Store struct {
-	mu           sync.RWMutex
-	snap         Snapshot
-	keyExpiresAt time.Time
+	mu   sync.RWMutex
+	snap Snapshot
 }
 
 func NewStore(vin string) *Store {
@@ -57,28 +58,19 @@ func (s *Store) Snapshot() Snapshot {
 	return s.snap
 }
 
-// KeyExpiresAt returns the API key expiry, or the zero time if never seen.
-func (s *Store) KeyExpiresAt() time.Time {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return s.keyExpiresAt
-}
-
 func (s *Store) record(res *api.VehicleResponse, meta api.Meta, err error, now time.Time) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snap := &s.snap
-	snap.Up = err == nil
+	s.snap.Up = err == nil
 	if err == nil {
-		snap.Response = res
-		snap.LastSuccess = now
+		s.snap.Response = res
+		s.snap.LastSuccess = now
 	}
 	if meta.RateLimitRemaining != nil {
-		n := *meta.RateLimitRemaining
-		snap.RateLimitRemaining = &n
+		s.snap.RateLimitRemaining = meta.RateLimitRemaining
 	}
 	if !meta.KeyExpiresAt.IsZero() {
-		s.keyExpiresAt = meta.KeyExpiresAt
+		s.snap.KeyExpiresAt = meta.KeyExpiresAt
 	}
 }
 
@@ -87,9 +79,8 @@ type Poller struct {
 	Fetcher  Fetcher
 	Store    *Store
 	VIN      string
-	Include  []string
+	Include  string
 	Interval time.Duration
-	Logger   *slog.Logger
 	// Requests counts API calls by VIN and HTTP status ("error" if none).
 	Requests *prometheus.CounterVec
 	// Now is the clock; nil means time.Now.
@@ -142,13 +133,13 @@ func (p *Poller) PollOnce(ctx context.Context) time.Duration {
 	p.Store.record(res, meta, err, now())
 
 	if err != nil {
-		p.logger().Warn("vehicle poll failed", "vin", p.VIN, "err", err)
+		slog.Warn("vehicle poll failed", "vin", p.VIN, "err", err)
 	} else if len(res.Errors) > 0 {
 		types := make([]string, 0, len(res.Errors))
 		for _, e := range res.Errors {
 			types = append(types, e.Type)
 		}
-		p.logger().Debug("vehicle poll partial", "vin", p.VIN, "missing", types)
+		slog.Debug("vehicle poll partial", "vin", p.VIN, "missing", types)
 	}
 
 	return nextDelay(p.Interval, meta, err)
@@ -168,11 +159,4 @@ func nextDelay(interval time.Duration, meta api.Meta, err error) time.Duration {
 	}
 	// Cap so a bogus header (epoch seconds, far-future date) cannot stop polling.
 	return min(d, max(interval, authBackoff))
-}
-
-func (p *Poller) logger() *slog.Logger {
-	if p.Logger != nil {
-		return p.Logger
-	}
-	return slog.Default()
 }

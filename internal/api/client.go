@@ -16,10 +16,7 @@ import (
 	"time"
 )
 
-const (
-	ProductionURL = "https://public.api.connect.skoda-auto.cz/api/v1"
-	SandboxURL    = "https://public.test-api.connect.skoda-auto.cz/api/v1"
-)
+const ProductionURL = "https://public.api.connect.skoda-auto.cz/api/v1"
 
 // maxBody caps how much of a response is read.
 const maxBody = 4 << 20
@@ -29,22 +26,17 @@ type Client struct {
 	baseURL string
 	apiKey  string
 	http    *http.Client
-	now     func() time.Time
 }
 
-func New(baseURL, apiKey string, httpClient *http.Client) *Client {
-	if httpClient == nil {
-		// Never follow redirects: Go would forward X-API-Key to the new host.
-		httpClient = &http.Client{
-			Timeout:       30 * time.Second,
-			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
-		}
-	}
+func New(baseURL, apiKey string) *Client {
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		apiKey:  apiKey,
-		http:    httpClient,
-		now:     time.Now,
+		http: &http.Client{
+			Timeout: 30 * time.Second,
+			// Never follow redirects: Go would forward X-API-Key to the new host.
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		},
 	}
 }
 
@@ -88,10 +80,10 @@ func IsStatus(err error, code int) bool {
 // Vehicle fetches one vehicle. include limits the response to the named
 // parts; empty means all parts. Meta is filled whenever a response arrived,
 // even if err is non-nil.
-func (c *Client) Vehicle(ctx context.Context, vin string, include []string) (*VehicleResponse, Meta, error) {
+func (c *Client) Vehicle(ctx context.Context, vin string, include string) (*VehicleResponse, Meta, error) {
 	u := c.baseURL + "/vehicles/" + url.PathEscape(vin)
-	if len(include) > 0 {
-		u += "?include=" + url.QueryEscape(strings.Join(include, ","))
+	if include != "" {
+		u += "?include=" + url.QueryEscape(include)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
@@ -108,7 +100,7 @@ func (c *Client) Vehicle(ctx context.Context, vin string, include []string) (*Ve
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	meta := c.parseMeta(resp)
+	meta := parseMeta(resp)
 	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
 	if err != nil {
 		return nil, meta, fmt.Errorf("myskoda api: reading body: %w", err)
@@ -127,7 +119,7 @@ func (c *Client) Vehicle(ctx context.Context, vin string, include []string) (*Ve
 	return &res, meta, nil
 }
 
-func (c *Client) parseMeta(resp *http.Response) Meta {
+func parseMeta(resp *http.Response) Meta {
 	m := Meta{StatusCode: resp.StatusCode}
 	h := resp.Header
 
@@ -137,7 +129,7 @@ func (c *Client) parseMeta(resp *http.Response) Meta {
 	if n, err := strconv.Atoi(strings.TrimSpace(h.Get("RateLimit-Reset"))); err == nil && n > 0 {
 		m.RateLimitReset = time.Duration(n) * time.Second
 	}
-	m.RetryAfter = parseRetryAfter(h.Get("Retry-After"), c.now())
+	m.RetryAfter = parseRetryAfter(h.Get("Retry-After"), time.Now())
 	m.KeyExpiresAt = parseTimestamp(h.Get("X-API-Key-Expires-At"))
 	return m
 }

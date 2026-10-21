@@ -90,25 +90,22 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		now = c.Now
 	}
 
-	if t := c.Store.KeyExpiresAt(); !t.IsZero() {
-		ch <- prometheus.MustNewConstMetric(descKeyExpiry, prometheus.GaugeValue, unix(t))
+	s := c.Store.Snapshot()
+	if !s.KeyExpiresAt.IsZero() {
+		ch <- prometheus.MustNewConstMetric(descKeyExpiry, prometheus.GaugeValue, unix(s.KeyExpiresAt))
 	}
-
-	{
-		s := c.Store.Snapshot()
-		ch <- gauge(descUp, b2f(s.Up), s.VIN)
-		if s.RateLimitRemaining != nil {
-			ch <- gauge(descRateLimit, float64(*s.RateLimitRemaining), s.VIN)
-		}
-		if s.Response == nil {
-			return
-		}
-		ch <- gauge(descLastSuccess, unix(s.LastSuccess), s.VIN)
-		if c.StaleAfter > 0 && now().Sub(s.LastSuccess) > c.StaleAfter {
-			return
-		}
-		collectVehicle(ch, s.VIN, s.Response)
+	ch <- gauge(descUp, b2f(s.Up), s.VIN)
+	if s.RateLimitRemaining != nil {
+		ch <- gauge(descRateLimit, float64(*s.RateLimitRemaining), s.VIN)
 	}
+	if s.Response == nil {
+		return
+	}
+	ch <- gauge(descLastSuccess, unix(s.LastSuccess), s.VIN)
+	if c.StaleAfter > 0 && now().Sub(s.LastSuccess) > c.StaleAfter {
+		return
+	}
+	collectVehicle(ch, s.VIN, s.Response)
 }
 
 func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleResponse) {
@@ -125,7 +122,7 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 	}
 
 	if v.Odometer != nil {
-		opt(ch, descOdometer, v.Odometer.MileageInKm, 1000, vin)
+		opt(ch, descOdometer, vin, v.Odometer.MileageInKm, 1000)
 	}
 	if ac := v.AirConditioning; ac != nil {
 		if ac.State != nil {
@@ -152,7 +149,7 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		if a.StartMode != nil {
 			enum(ch, descAuxMode, vin, *a.StartMode, auxModes)
 		}
-		opt(ch, descAuxDuration, a.DurationInSeconds, 1, vin)
+		opt(ch, descAuxDuration, vin, a.DurationInSeconds, 1)
 		temp(ch, descAuxTemp, vin, a.TargetTemperature)
 		ts(ch, descAuxReach, vin, a.EstimatedReachOfTargetTemperatureAt)
 	}
@@ -160,7 +157,7 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		if a.State != nil {
 			enum(ch, descVentState, vin, *a.State, ventStates)
 		}
-		opt(ch, descVentDuration, a.DurationInSeconds, 1, vin)
+		opt(ch, descVentDuration, vin, a.DurationInSeconds, 1)
 	}
 	if v.Status != nil && v.Status.Overall != nil {
 		if d := v.Status.Overall.DoorsLocked; d != nil {
@@ -178,17 +175,17 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		ch <- gauge(descSavedLocation, b2f(*chg.IsVehicleInSavedLocation), vin)
 	}
 	if st := chg.Settings; st != nil {
-		opt(ch, descTargetSoc, st.TargetStateOfChargeInPercent, 0.01, vin)
-		opt(ch, descMaxCurrent, st.MaxChargeCurrentAcAmpere, 1, vin)
+		opt(ch, descTargetSoc, vin, st.TargetStateOfChargeInPercent, 0.01)
+		opt(ch, descMaxCurrent, vin, st.MaxChargeCurrentAcAmpere, 1)
 	}
 
 	st := chg.Status
 	if st == nil {
 		return
 	}
-	opt(ch, descPower, st.ChargePowerInKw, 1000, vin)
-	opt(ch, descRate, st.ChargingRateInKilometersPerHour, 1000, vin)
-	opt(ch, descRemaining, st.RemainingTimeToFullyChargedInMinutes, 60, vin)
+	opt(ch, descPower, vin, st.ChargePowerInKw, 1000)
+	opt(ch, descRate, vin, st.ChargingRateInKilometersPerHour, 1000)
+	opt(ch, descRemaining, vin, st.RemainingTimeToFullyChargedInMinutes, 60)
 	ts(ch, descFullyAt, vin, st.FullyChargedAt)
 	if st.State != nil {
 		enum(ch, descState, vin, *st.State, chargingStates)
@@ -213,8 +210,8 @@ func collectVehicle(ch chan<- prometheus.Metric, vin string, res *api.VehicleRes
 		}
 	}
 	if b := st.Battery; b != nil {
-		opt(ch, descSoc, b.StateOfChargeInPercent, 0.01, vin)
-		opt(ch, descRange, b.RemainingCruisingRangeInMeters, 1, vin)
+		opt(ch, descSoc, vin, b.StateOfChargeInPercent, 0.01)
+		opt(ch, descRange, vin, b.RemainingCruisingRangeInMeters, 1)
 	}
 }
 
@@ -272,9 +269,9 @@ func temp(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, t *api.Te
 	}
 }
 
-func opt(ch chan<- prometheus.Metric, d *prometheus.Desc, v *float64, scale float64, labels ...string) {
+func opt(ch chan<- prometheus.Metric, d *prometheus.Desc, vin string, v *float64, scale float64) {
 	if v != nil {
-		ch <- gauge(d, *v*scale, labels...)
+		ch <- gauge(d, *v*scale, vin)
 	}
 }
 
