@@ -24,6 +24,10 @@ func TestNextDelay(t *testing.T) {
 		{"quota used up on success", api.Meta{StatusCode: 200, RateLimitRemaining: &zero, RateLimitReset: 40 * time.Minute}, nil, 40 * time.Minute},
 		{"429 honours Retry-After", api.Meta{StatusCode: 429, RetryAfter: 20 * time.Minute}, &api.StatusError{StatusCode: 429}, 20 * time.Minute},
 		{"429 short Retry-After keeps interval", api.Meta{StatusCode: 429, RetryAfter: time.Minute}, &api.StatusError{StatusCode: 429}, iv},
+		{"huge RateLimit-Reset with quota used up is capped", api.Meta{StatusCode: 200, RateLimitRemaining: &zero, RateLimitReset: 1_700_000_000 * time.Second}, nil, time.Hour},
+		{"far-future Retry-After is capped", api.Meta{StatusCode: 429, RetryAfter: 24 * 365 * time.Hour}, &api.StatusError{StatusCode: 429}, time.Hour},
+		{"429 without headers keeps interval", api.Meta{StatusCode: 429}, &api.StatusError{StatusCode: 429}, iv},
+		{"429 with only RateLimit-Reset", api.Meta{StatusCode: 429, RateLimitReset: 30 * time.Minute}, &api.StatusError{StatusCode: 429}, 30 * time.Minute},
 		{"401 backs off", api.Meta{StatusCode: 401}, &api.StatusError{StatusCode: 401}, time.Hour},
 		{"403 backs off", api.Meta{StatusCode: 403}, &api.StatusError{StatusCode: 403}, time.Hour},
 		{"5xx waits a normal tick", api.Meta{StatusCode: 503}, &api.StatusError{StatusCode: 503}, iv},
@@ -32,6 +36,11 @@ func TestNextDelay(t *testing.T) {
 		if got := nextDelay(iv, tc.meta, tc.err); got != tc.want {
 			t.Errorf("%s: got %v, want %v", tc.name, got, tc.want)
 		}
+	}
+	// With interval > 1h the interval is the cap.
+	huge := api.Meta{StatusCode: 200, RateLimitRemaining: &zero, RateLimitReset: 1_700_000_000 * time.Second}
+	if got := nextDelay(2*time.Hour, huge, nil); got != 2*time.Hour {
+		t.Errorf("interval above 1h: got %v, want 2h", got)
 	}
 }
 

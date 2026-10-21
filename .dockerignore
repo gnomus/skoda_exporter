@@ -2,3 +2,4 @@
 deploy
 *.md
 .claude
+api-key.txt

@@ -70,7 +70,8 @@ Configuration is read from environment variables only.
   `SKODA_STALE_AFTER`. 5xx errors wait for the next regular tick, because failed
   calls count against the quota. 401/403 back off to one call per hour.
 - **Rate limit.** On 429 the exporter waits for `Retry-After`; when
-  `RateLimit-Remaining` reaches 0 it waits for `RateLimit-Reset`.
+  `RateLimit-Remaining` reaches 0 it waits for `RateLimit-Reset` (at most 1h, or
+  the poll interval if longer).
 
 ## Metrics
 
@@ -116,7 +117,7 @@ Exporter health:
 | --- | --- |
 | `skoda_up` | 1 if the last call for the VIN succeeded |
 | `skoda_last_success_timestamp_seconds` | Time of the last successful call |
-| `skoda_api_requests_total{code}` | API calls by HTTP status (`error` for network failures) |
+| `skoda_api_requests_total{vin,code}` | API calls by HTTP status (`error` for network failures) |
 | `skoda_api_part_errors{type}` | Parts missing from the last response |
 | `skoda_api_ratelimit_remaining` | From `RateLimit-Remaining` |
 | `skoda_api_key_expiry_timestamp_seconds` | From `X-API-Key-Expires-At` |

@@ -166,7 +166,8 @@ func nextDelay(interval time.Duration, meta api.Meta, err error) time.Duration {
 	if meta.RateLimitRemaining != nil && *meta.RateLimitRemaining <= 0 {
 		d = max(d, meta.RateLimitReset)
 	}
-	return d
+	// Cap so a bogus header (epoch seconds, far-future date) cannot stop polling.
+	return min(d, max(interval, authBackoff))
 }
 
 func (p *Poller) logger() *slog.Logger {

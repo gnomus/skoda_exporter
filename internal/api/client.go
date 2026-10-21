@@ -34,7 +34,11 @@ type Client struct {
 
 func New(baseURL, apiKey string, httpClient *http.Client) *Client {
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: 30 * time.Second}
+		// Never follow redirects: Go would forward X-API-Key to the new host.
+		httpClient = &http.Client{
+			Timeout:       30 * time.Second,
+			CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+		}
 	}
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
