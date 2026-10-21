@@ -77,6 +77,24 @@ func TestVehicleFull(t *testing.T) {
 	}
 }
 
+func TestVehicleDoesNotFollowRedirects(t *testing.T) {
+	hit := false
+	other := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { hit = true }))
+	defer other.Close()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, other.URL, http.StatusFound)
+	}))
+	defer srv.Close()
+
+	_, _, err := New(srv.URL, "secret", nil).Vehicle(context.Background(), "V1", nil)
+	if !IsStatus(err, http.StatusFound) {
+		t.Errorf("err = %v, want 302 StatusError", err)
+	}
+	if hit {
+		t.Error("redirect target received a request")
+	}
+}
+
 func TestVehiclePartial(t *testing.T) {
 	body := fixture(t, "partial.json")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

@@ -104,8 +104,11 @@ func main() {
 	}
 
 	go p.Run(ctx)
+	done := make(chan struct{})
 	go func() {
+		defer close(done)
 		<-ctx.Done()
+		stop() // restore default signal handling so a second signal kills the process during the drain
 		shutdown, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		if err := srv.Shutdown(shutdown); err != nil {
@@ -117,6 +120,8 @@ func main() {
 	if err := srv.Serve(ln); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		fatal("http server", err)
 	}
+	// Serve returns as soon as Shutdown starts; wait for in-flight requests to drain.
+	<-done
 }
 
 func loadConfig() config {
