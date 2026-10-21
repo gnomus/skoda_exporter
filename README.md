@@ -15,36 +15,10 @@ SKODA_API_KEY=your-key SKODA_VIN=TMB... go run ./cmd/skoda-exporter
 curl localhost:9877/metrics
 ```
 
-Or with Docker Compose (exporter + Prometheus with alert rules):
+## Docker image
 
-```sh
-# set SKODA_API_KEY and SKODA_VIN in deploy/docker-compose.yml
-docker compose -f deploy/docker-compose.yml up -d
-```
-
-## Kubernetes with FluxCD
-
-`deploy/kubernetes` is a Kustomize base for clusters running the Prometheus Operator:
-namespace, ConfigMap, Deployment, Service, ServiceMonitor and PrometheusRule.
-`deploy/kubernetes/flux/skoda-exporter.yaml` holds the Flux `GitRepository` and
-`Kustomization` that apply it.
-
-1. Push a semver tag such as `1.2.3` (no `v` prefix) so CI publishes `ghcr.io/OWNER/skoda_exporter:<version>`, then set
-   that image in `deployment.yaml` (replace `OWNER`). If the package is private, add an
-   `imagePullSecrets` entry.
-2. Put your VIN in `configmap.yaml`.
-3. Create the API key secret with SOPS (Flux decrypts it with the `sops-age` secret):
-   ```sh
-   cp deploy/kubernetes/secret.example.yaml deploy/kubernetes/secret.sops.yaml
-   # edit the key in, then
-   sops --encrypt --in-place deploy/kubernetes/secret.sops.yaml
-   ```
-   and uncomment `secret.sops.yaml` in `kustomization.yaml`.
-4. Set the `release` label on the ServiceMonitor and PrometheusRule to whatever your
-   Prometheus resource selects on (`kube-prometheus-stack` by default).
-5. Add `flux/skoda-exporter.yaml` to your fleet repo, with the repo URL filled in.
-
-Keep `replicas: 1`: each replica polls the API on its own.
+Pushing a semver tag such as `1.2.3` (no `v` prefix) makes CI publish `ghcr.io/OWNER/skoda_exporter:<version>`.
+Run a single instance per VIN: each instance polls the API on its own.
 
 ## Configuration
 
@@ -121,8 +95,6 @@ Exporter health:
 | `skoda_api_part_errors{type}` | Parts missing from the last response |
 | `skoda_api_ratelimit_remaining` | From `RateLimit-Remaining` |
 | `skoda_api_key_expiry_timestamp_seconds` | From `X-API-Key-Expires-At` |
-
-`deploy/alerts.yml` has alerts for key expiry within 7 days, stale data and an exhausted quota.
 
 ## Known gaps
 

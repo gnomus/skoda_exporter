@@ -33,4 +33,3 @@ Data flows `api` → `poller.Store` → `collector`, wired in `cmd/skoda-exporte
 ## Notes
 
 - Field names come from the API docs page/changelog and evcc's client, not the OpenAPI spec; `doorsLocked` is a string enum (YES/NO…, confirmed from a real response) — see `parseLocked`.
-- README.md refers to a `deploy/` directory (docker-compose, alerts, Kustomize/Flux manifests) that is not in the repo yet.
